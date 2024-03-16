@@ -9,21 +9,17 @@ use std::{ffi::OsStr, process::Command};
 use std::path::PathBuf;
 
 use clap::{Parser, Subcommand};
-use std::ffi::OsString;
 
 #[derive(Parser)]
 #[command(version, about, long_about = None)]
 struct Cli {
-    /// Optional name to operate on
-    // name: Option<String>,
-
     /// Sets a custom config file
     #[arg(short, long, value_name = "FILE")]
     config: Option<PathBuf>,
 
-    /// Turn debugging information on
+    /// Verbose level
     #[arg(short, long, action = clap::ArgAction::Count)]
-    debug: u8,
+    verbose: u8,
 
     #[command(subcommand)]
     command: Option<Commands>,
@@ -39,7 +35,7 @@ enum Commands {
 
         /// build args
         #[arg(short, long, value_name = "build-arg")]
-        build_args: Vec<String>,
+        build_arg: Vec<String>,
     },
 
     Deploy {
@@ -49,7 +45,7 @@ enum Commands {
 
         /// build args
         #[arg(short, long, value_name = "build-arg")]
-        build_args: Vec<String>,
+        build_arg: Vec<String>,
     },
 }
 
@@ -72,11 +68,16 @@ struct Scope {
     path: String,
 }
 
-fn exec_command(program: &str, command: Vec<&str>) -> Result<String, Box<dyn std::error::Error>> {
+fn exec_command(program: &str, command: Vec<&str>, build_arg: &Vec<String>) -> Result<String, Box<dyn std::error::Error>> {
     let mut exec_command = Command::new(&program);
     exec_command.args(command);
-    // exec_command.envs(envs);
-    exec_command.env("BACKEND_TAG", "0.0.2");
+    for build_arg_item in build_arg {
+        let parts: Vec<&str> = build_arg_item.splitn(2, '=').collect();
+        if parts.len() < 2 {
+            panic!("Invalid build-arg without `=`: `{}`", build_arg_item)
+        }
+        exec_command.env(parts[0], parts[1]);
+    }
     let output = exec_command.output().expect("failed to execute process");
     let args: Vec<&OsStr> = exec_command.get_args().collect();
     let envs: Vec<(&OsStr, Option<&OsStr>)> = exec_command.get_envs().collect();
@@ -121,40 +122,36 @@ fn call_host(
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let cli = Cli::parse();
 
-    // if let Some(name) = cli.name.as_deref() {
-    //     println!("Value for name: {name}");
-    // }
-
     if let Some(config_path) = cli.config.as_deref() {
         println!("Value for config: {}", config_path.display());
     }
 
-    match cli.debug {
-        0 => println!("Debug mode is off"),
+    match cli.verbose {
+        0 => println!("Verbose mode is off"),
         1 => println!("Debug mode is kind of on"),
         2 => println!("Debug mode is on"),
         _ => println!("Don't be crazy"),
     }
 
     match &cli.command {
-        Some(Commands::Build { names, build_args }) => {
+        Some(Commands::Build { names, build_arg }) => {
             let f = std::fs::File::open("tests/docker-compose.yaml").expect("Could not open file.");
             let format: DockerComposeFormat =
                 serde_yaml::from_reader(f).expect("Could not read values.");
             println!("{:?}", format);
 
-            let _ = build(&format, &names, build_args);
+            let _ = build(&format, &names, build_arg);
         }
-        Some(Commands::Deploy { names, build_args }) => {
+        Some(Commands::Deploy { names, build_arg }) => {
             println!("names: {:?}", names);
-            println!("build_args: {:?}", build_args);
+            println!("build_arg: {:?}", build_arg);
 
             let f = std::fs::File::open("tests/docker-compose.yaml").expect("Could not open file.");
             let format: DockerComposeFormat =
                 serde_yaml::from_reader(f).expect("Could not read values.");
             println!("{:?}", format);
 
-            let _x = deploy_test_backend(&format, names, build_args);
+            let _x = deploy_test_backend(&format, names, build_arg);
         }
         None => {}
     }
@@ -164,7 +161,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 fn build(
     format: &DockerComposeFormat,
     names: &Vec<String>,
-    build_args: &Vec<String>,
+    build_arg: &Vec<String>,
 ) -> Result<(), Box<dyn std::error::Error>> {
     let scope = Scope {
         hosts: vec!["root@46.101.98.131".to_string()],
@@ -174,9 +171,6 @@ fn build(
         path: "tests".to_string(),
     };
 
-    // let envs: vec![
-    //     (OsString::from("BACKEND_TAG"), Some(OsString::from("0.0.1"))),
-    // ];
     let _ = exec_command(
         "docker",
         vec![
@@ -188,9 +182,8 @@ fn build(
             "build",
             "backend",
             "--push",
-            "--build-arg",
-            "BACKEND_TAG=0.0.1",
         ],
+        build_arg,
     );
     Ok(())
 }
@@ -198,7 +191,7 @@ fn build(
 fn deploy_test_backend(
     format: &DockerComposeFormat,
     names: &Vec<String>,
-    build_args: &Vec<String>,
+    build_arg: &Vec<String>,
 ) -> Result<(), Box<dyn std::error::Error>> {
     let host = RemoteHostCall {
         private_key: Some("~/.ssh/dkrpublish_rsa".to_string()),
@@ -258,7 +251,10 @@ fn deploy_test_backend(
     let _ = call_host(&host, &"scp", vec!["-r", &scope.path, &host0_path])
         .expect("Failed to call host.");
 
-    let mut deploy_command = "BACKEND_TAG=0.0.1".to_owned();
+    let mut deploy_command = String::new();
+    for build_arg_item in build_arg {
+        deploy_command += build_arg_item;
+    }
     deploy_command += " docker compose -f ";
     deploy_command += &(scope.path.clone() + "/docker-compose.yaml");
     deploy_command += " -f tests/docker-compose.override-run.prod.yaml";
