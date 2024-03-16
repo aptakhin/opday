@@ -9,7 +9,7 @@ use std::{ffi::OsStr, process::Command};
 use std::path::PathBuf;
 
 use clap::{Parser, Subcommand};
-use std::ffi::{OsString};
+use std::ffi::OsString;
 
 #[derive(Parser)]
 #[command(version, about, long_about = None)]
@@ -84,14 +84,23 @@ fn exec_command(program: &str, command: Vec<&str>) -> Result<String, Box<dyn std
     let status = output.status;
     let stdout = String::from_utf8_lossy(&output.stdout).to_string();
     let stderr = String::from_utf8_lossy(&output.stderr).to_string();
-    println!("Exec command: {:?} envs:{:?} args:{:?} {:?} {:?} {:?}", program, &envs, &args, status, stdout, stderr);
+    println!(
+        "Exec command: {:?} envs:{:?} args:{:?} {:?} {:?} {:?}",
+        program, &envs, &args, status, stdout, stderr
+    );
     Ok(stdout)
 }
 
-fn call_host(host: &RemoteHostCall, program: &str, command: Vec<&str>) -> Result<String, Box<dyn std::error::Error>> {
+fn call_host(
+    host: &RemoteHostCall,
+    program: &str,
+    command: Vec<&str>,
+) -> Result<String, Box<dyn std::error::Error>> {
     let mut exec_command = Command::new(&program);
     if host.private_key.is_some() {
-        exec_command.arg("-i").arg(host.private_key.as_ref().unwrap());
+        exec_command
+            .arg("-i")
+            .arg(host.private_key.as_ref().unwrap());
     }
     for arg in command {
         exec_command.arg(arg);
@@ -102,7 +111,10 @@ fn call_host(host: &RemoteHostCall, program: &str, command: Vec<&str>) -> Result
     let status = output.status;
     let stdout = String::from_utf8_lossy(&output.stdout).to_string();
     let stderr = String::from_utf8_lossy(&output.stderr).to_string();
-    println!("Exec command: {:?} {:?} {:?} {:?} {:?}", program, &args, status, stdout, stderr);
+    println!(
+        "Exec command: {:?} {:?} {:?} {:?} {:?}",
+        program, &args, status, stdout, stderr
+    );
     Ok(stdout)
 }
 
@@ -127,18 +139,19 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     match &cli.command {
         Some(Commands::Build { names, build_args }) => {
             let f = std::fs::File::open("tests/docker-compose.yaml").expect("Could not open file.");
-            let format: DockerComposeFormat = serde_yaml::from_reader(f).expect("Could not read values.");
+            let format: DockerComposeFormat =
+                serde_yaml::from_reader(f).expect("Could not read values.");
             println!("{:?}", format);
 
             let _ = build(&format, &names, build_args);
-
         }
         Some(Commands::Deploy { names, build_args }) => {
             println!("names: {:?}", names);
             println!("build_args: {:?}", build_args);
 
             let f = std::fs::File::open("tests/docker-compose.yaml").expect("Could not open file.");
-            let format: DockerComposeFormat = serde_yaml::from_reader(f).expect("Could not read values.");
+            let format: DockerComposeFormat =
+                serde_yaml::from_reader(f).expect("Could not read values.");
             println!("{:?}", format);
 
             let _x = deploy_test_backend(&format, names, build_args);
@@ -148,8 +161,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     Ok(())
 }
 
-
-fn build(format: &DockerComposeFormat, names: &Vec<String>, build_args: &Vec<String>) -> Result<(), Box<dyn std::error::Error>> {
+fn build(
+    format: &DockerComposeFormat,
+    names: &Vec<String>,
+    build_args: &Vec<String>,
+) -> Result<(), Box<dyn std::error::Error>> {
     let scope = Scope {
         hosts: vec!["root@46.101.98.131".to_string()],
         registry: "registry.digitalocean.com".to_string(),
@@ -161,11 +177,29 @@ fn build(format: &DockerComposeFormat, names: &Vec<String>, build_args: &Vec<Str
     // let envs: vec![
     //     (OsString::from("BACKEND_TAG"), Some(OsString::from("0.0.1"))),
     // ];
-    let _ = exec_command("docker", vec!["compose", "-f", &(scope.path.clone() + "/docker-compose.yaml"), "-f", "tests/docker-compose.override-run.prod.yaml", "build", "backend", "--push", "--build-arg", "BACKEND_TAG=0.0.1"]);
+    let _ = exec_command(
+        "docker",
+        vec![
+            "compose",
+            "-f",
+            &(scope.path.clone() + "/docker-compose.yaml"),
+            "-f",
+            "tests/docker-compose.override-run.prod.yaml",
+            "build",
+            "backend",
+            "--push",
+            "--build-arg",
+            "BACKEND_TAG=0.0.1",
+        ],
+    );
     Ok(())
 }
 
-fn deploy_test_backend(format: &DockerComposeFormat, names: &Vec<String>, build_args: &Vec<String>) -> Result<(), Box<dyn std::error::Error>> {
+fn deploy_test_backend(
+    format: &DockerComposeFormat,
+    names: &Vec<String>,
+    build_args: &Vec<String>,
+) -> Result<(), Box<dyn std::error::Error>> {
     let host = RemoteHostCall {
         private_key: Some("~/.ssh/dkrpublish_rsa".to_string()),
     };
@@ -178,7 +212,8 @@ fn deploy_test_backend(format: &DockerComposeFormat, names: &Vec<String>, build_
         path: "tests".to_string(),
     };
 
-    let run_file = std::fs::File::create("tests/.dkr-generated/docker-compose.override-run.yaml").expect("Could not open file.");
+    let run_file = std::fs::File::create("tests/.dkr-generated/docker-compose.override-run.yaml")
+        .expect("Could not open file.");
     let mut run_format = DockerComposeFormat {
         version: format.version.clone(),
         services: Mapping::new(),
@@ -190,18 +225,38 @@ fn deploy_test_backend(format: &DockerComposeFormat, names: &Vec<String>, build_
     // run_environment_map.insert(Value::String((&"xxx").to_string()), "yyy".into());
     // run_environment_map.insert(Value::String((&"DATABASE_URL").to_string()), "zzz".into());
     run_service_map.insert(Value::String((&"build").to_string()), "!reset null".into());
-    run_service_map.insert(Value::String((&"environment").to_string()), Value::Mapping(run_environment_map));
+    run_service_map.insert(
+        Value::String((&"environment").to_string()),
+        Value::Mapping(run_environment_map),
+    );
 
-    run_format.services.insert(Value::String((&"backend").to_string()), Value::Mapping(run_service_map));
+    run_format.services.insert(
+        Value::String((&"backend").to_string()),
+        Value::Mapping(run_service_map),
+    );
     serde_yaml::to_writer(run_file, &run_format).expect("Could not write values.");
 
     let host0 = &scope.hosts[0];
     let host0_path = scope.hosts[0].clone() + ":.";
 
-    let _ = call_host(&host, &"scp", vec![&scope.registry_auth_config, &(host0.clone() + ":" + &scope.registry_export_auth_config)]).expect("Failed to call host.");
-    let _ = call_host(&host, &"ssh", vec![host0, &("docker login ".to_owned() + &scope.registry)]).expect("Failed to call host.");
+    let _ = call_host(
+        &host,
+        &"scp",
+        vec![
+            &scope.registry_auth_config,
+            &(host0.clone() + ":" + &scope.registry_export_auth_config),
+        ],
+    )
+    .expect("Failed to call host.");
+    let _ = call_host(
+        &host,
+        &"ssh",
+        vec![host0, &("docker login ".to_owned() + &scope.registry)],
+    )
+    .expect("Failed to call host.");
 
-    let _ = call_host(&host, &"scp", vec!["-r", &scope.path, &host0_path]).expect("Failed to call host.");
+    let _ = call_host(&host, &"scp", vec!["-r", &scope.path, &host0_path])
+        .expect("Failed to call host.");
 
     let mut deploy_command = "BACKEND_TAG=0.0.1".to_owned();
     deploy_command += " docker compose -f ";
