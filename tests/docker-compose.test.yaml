@@ -1,0 +1,23 @@
+version: '3.7'
+services:
+  backend:
+    build: test-backend
+    command: uvicorn app:app --host 0.0.0.0 --port 8000
+    ports:
+      - "8000:8000"
+    environment:
+      DATABASE_URL: psycopg2://postgres:postgres@0.0.0.0:5432/postgres
+
+  postgres:
+    image: postgres:16.1-bullseye
+    restart: unless-stopped
+    ports:
+      - 5432:5432
+    volumes:
+      - ./data:/data
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+
+volumes:
+  data:

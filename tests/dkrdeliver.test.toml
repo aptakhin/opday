@@ -1,0 +1,19 @@
+[service.postgres]
+environment = 'DATABASE_URL'
+scope = 'aaa'
+
+[service.env.local]
+database = 'postgres'
+
+[service.env.dev]
+database = 'dev'
+
+[service.env.prod]
+database = 'prod'
+
+# [scope]
+# scope = 'aws'
+
+
+[service.]
+scope = 'aws'
