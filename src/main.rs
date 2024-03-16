@@ -66,9 +66,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let config = config::read_configuration("tests/dkrdeliver.test.toml")
         .expect("Could not read configuration.");
 
+    // let scope = &config.environments[0];
+
     match &cli.command {
         Some(Commands::Build { names, build_arg }) => {
-            let f = std::fs::File::open("tests/docker-compose.yaml").expect("Could not open file.");
+            let f = std::fs::File::open(&config.docker_compose_file).expect("Could not open file.");
             let format: DockerComposeFormat =
                 serde_yaml::from_reader(f).expect("Could not read values.");
             debug!("{:?}", format);
@@ -76,7 +78,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             let _ = build(&config, &format, &names, build_arg);
         }
         Some(Commands::Deploy { names, build_arg }) => {
-            let f = std::fs::File::open("tests/docker-compose.yaml").expect("Could not open file.");
+            let f = std::fs::File::open(&config.docker_compose_file).expect("Could not open file.");
             let format: DockerComposeFormat =
                 serde_yaml::from_reader(f).expect("Could not read values.");
             debug!("{:?}", format);

@@ -2,7 +2,7 @@ title = "My Project"
 description = "My Project"
 
 path = "tests"
-docker_compose_file = "tests/docker-compose.yml"
+docker_compose_file = "tests/docker-compose.yaml"
 
 [services]
 [services.backend]

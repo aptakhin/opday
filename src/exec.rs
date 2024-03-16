@@ -20,16 +20,20 @@ pub fn exec_command(
         }
         exec_command.env(parts[0], parts[1]);
     }
+    debug!(
+        "Start command: {:?} envs:{:?} args:{:?}",
+        program, &exec_command.get_envs(), &exec_command.get_args(),
+    );
     let output = exec_command.output().expect("failed to execute process");
-    let args: Vec<&OsStr> = exec_command.get_args().collect();
-    let envs: Vec<(&OsStr, Option<&OsStr>)> = exec_command.get_envs().collect();
+    // let args: Vec<&OsStr> = exec_command.get_args().collect();
+    // let envs: Vec<(&OsStr, Option<&OsStr>)> = exec_command.get_envs().collect();
 
     let status = output.status;
     let stdout = String::from_utf8_lossy(&output.stdout).to_string();
     let stderr = String::from_utf8_lossy(&output.stderr).to_string();
     debug!(
-        "Exec command: {:?} envs:{:?} args:{:?} {:?} {:?} {:?}",
-        program, &envs, &args, status, stdout, stderr
+        "Executed command: {:?} envs:{:?} args:{:?} {:?} {:?} {:?}",
+        program, &exec_command.get_envs(), &exec_command.get_args(), status, stdout, stderr
     );
     Ok(stdout)
 }

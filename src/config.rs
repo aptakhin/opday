@@ -1,5 +1,3 @@
-// pub mod config;
-
 use log::debug;
 use toml::Table;
 
@@ -14,11 +12,9 @@ pub struct Scope {
 
 pub struct Configuration {
     pub path: String,
-    // current_scope: Scope,
+    pub docker_compose_file: String,
     pub environments: Vec<Scope>,
 }
-
-// pub mod config {
 
 fn get_string_value<'a>(current: &'a Table, base: &'a Table, key: &str) -> Option<String> {
     if current.contains_key(key) {
@@ -76,17 +72,15 @@ fn push_parsing_scope(current: &Table, base: &Table) -> Scope {
     };
 }
 
-pub fn read_configuration(path: &str) -> Result<Configuration, Box<dyn std::error::Error>> {
-    let path = std::path::Path::new(&path);
-    let file = match std::fs::read_to_string(path) {
-        Ok(f) => f,
-        Err(e) => panic!("{}", e),
-    };
-
-    let cfg: Table = file.parse().unwrap();
+pub fn read_configuration_raw(content: &str) -> Result<Configuration, Box<dyn std::error::Error>> {
+    let cfg: Table = content.parse().unwrap();
 
     let mut environments: Vec<Scope> = vec![];
     let mut base_scope = Table::new();
+
+    if !cfg.contains_key("environments") {
+        panic!("Invalid config file. No environments found.");
+    }
 
     let val: Table = cfg["environments"].as_table().unwrap().clone();
     for (key, value) in val.iter() {
@@ -107,11 +101,60 @@ pub fn read_configuration(path: &str) -> Result<Configuration, Box<dyn std::erro
         environments.push(scope);
     }
 
+    if !cfg.contains_key("path") {
+        panic!("Invalid config file. No path found.");
+    }
+    if !cfg.contains_key("docker_compose_file") {
+        panic!("Invalid config file. No docker_compose_file found.");
+    }
     let config: Configuration = Configuration {
         path: cfg["path"].as_str().unwrap().to_string(),
+        docker_compose_file: cfg["docker_compose_file"].as_str().unwrap().to_string(),
         environments: environments,
     };
     Ok(config)
 }
 
-// }
+pub fn read_configuration(path: &str) -> Result<Configuration, Box<dyn std::error::Error>> {
+    let path = std::path::Path::new(&path);
+    let file = match std::fs::read_to_string(path) {
+        Ok(f) => f,
+        Err(e) => panic!("{}", e),
+    };
+    read_configuration_raw(&file)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    #[should_panic(expected = "Invalid config file. No environments found.")]
+    fn test_empty_configuration() {
+        let toml_data = r#"
+        "#;
+        let config = read_configuration_raw(&toml_data);
+        assert_eq!(config.is_ok(), true);
+    }
+
+    #[test]
+    #[should_panic(expected = "Invalid config file. No path found.")]
+    fn test_no_path() {
+        let toml_data = r#"
+        [environments]
+        "#;
+        let config = read_configuration_raw(&toml_data);
+        assert_eq!(config.is_ok(), true);
+    }
+
+    #[test]
+    #[should_panic(expected = "Invalid config file. No docker_compose_file found.")]
+    fn test_no_docker_compose_file() {
+        let toml_data = r#"
+        path = "path"
+        [environments]
+        "#;
+        let config = read_configuration_raw(&toml_data);
+        assert_eq!(config.is_ok(), true);
+    }
+}
