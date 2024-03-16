@@ -9,9 +9,8 @@ use std::{ffi::OsStr, process::Command};
 use std::path::PathBuf;
 
 use clap::{Parser, Subcommand};
-use log::{info, trace, debug, warn, error};
+use log::{debug, error, info, trace, warn};
 use toml::Table;
-
 
 #[derive(Parser)]
 #[command(version, about, long_about = None)]
@@ -81,7 +80,11 @@ struct Configuration {
     environments: Vec<Scope>,
 }
 
-fn exec_command(program: &str, command: Vec<&str>, build_arg: &Vec<String>) -> Result<String, Box<dyn std::error::Error>> {
+fn exec_command(
+    program: &str,
+    command: Vec<&str>,
+    build_arg: &Vec<String>,
+) -> Result<String, Box<dyn std::error::Error>> {
     let mut exec_command = Command::new(&program);
     exec_command.args(command);
     for build_arg_item in build_arg {
@@ -132,7 +135,6 @@ fn call_host(
     Ok(stdout)
 }
 
-
 fn get_string_value<'a>(current: &'a Table, base: &'a Table, key: &str) -> Option<String> {
     if current.contains_key(key) {
         return Some(current[key].as_str().unwrap().to_string());
@@ -142,11 +144,29 @@ fn get_string_value<'a>(current: &'a Table, base: &'a Table, key: &str) -> Optio
     None
 }
 
-fn get_string_array_value<'a>(current: &'a Table, base: &'a Table, key: &str) -> Option<Vec<String>> {
+fn get_string_array_value<'a>(
+    current: &'a Table,
+    base: &'a Table,
+    key: &str,
+) -> Option<Vec<String>> {
     if current.contains_key(key) {
-        return Some(current[key].as_array().unwrap().iter().map(|x| x.as_str().unwrap().to_string()).collect());
+        return Some(
+            current[key]
+                .as_array()
+                .unwrap()
+                .iter()
+                .map(|x| x.as_str().unwrap().to_string())
+                .collect(),
+        );
     } else if base.contains_key(key) {
-        return Some(base[key].as_array().unwrap().iter().map(|x| x.as_str().unwrap().to_string()).collect());
+        return Some(
+            base[key]
+                .as_array()
+                .unwrap()
+                .iter()
+                .map(|x| x.as_str().unwrap().to_string())
+                .collect(),
+        );
     }
     None
 }
@@ -155,8 +175,10 @@ fn push_parsing_scope(current: &Table, base: &Table) -> Scope {
     let registry = get_string_value(current, base, "registry");
     let hosts = get_string_array_value(current, base, "hosts");
     let registry_auth_config = get_string_value(current, base, "registry_auth_config");
-    let registry_export_auth_config = get_string_value(current, base, "registry_export_auth_config");
-    let docker_compose_overrides = get_string_array_value(current, base, "docker_compose_overrides");
+    let registry_export_auth_config =
+        get_string_value(current, base, "registry_export_auth_config");
+    let docker_compose_overrides =
+        get_string_array_value(current, base, "docker_compose_overrides");
     let ssh_private_key = get_string_value(current, base, "ssh_private_key");
 
     return Scope {
@@ -212,9 +234,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     env_logger::init();
 
-    let config = read_configuration("tests/dkrdeliver.test.toml").expect("Could not read configuration.");
-
-    // println!("Nested bool: {:?}", cfg_bool);
+    let config =
+        read_configuration("tests/dkrdeliver.test.toml").expect("Could not read configuration.");
 
     match &cli.command {
         Some(Commands::Build { names, build_arg }) => {
