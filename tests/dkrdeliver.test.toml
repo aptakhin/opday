@@ -1,19 +1,30 @@
-[service.postgres]
-environment = 'DATABASE_URL'
-scope = 'aaa'
+title = "My Project"
+description = "My Project"
 
-[service.env.local]
-database = 'postgres'
+path = "tests"
+docker_compose_file = "tests/docker-compose.yml"
 
-[service.env.dev]
-database = 'dev'
-
-[service.env.prod]
-database = 'prod'
-
-# [scope]
-# scope = 'aws'
+[services]
+[services.backend]
 
 
-[service.]
-scope = 'aws'
+[environments.prod]
+hosts = [
+    "root@46.101.98.131",
+]
+
+export_path = "/root/test-backend-prod"
+
+docker_compose_overrides = [
+    "tests/docker-compose.override-run.prod.yml",
+]
+
+
+[environments]
+
+ssh_private_key = "~/.ssh/dkrpublish_rsa"
+
+registry = "registry.digitalocean.com"
+
+registry_auth_config = ".secrets/docker-config.json"
+registry_export_auth_config = "/root/.docker/config.json"

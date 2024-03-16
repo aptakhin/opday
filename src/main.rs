@@ -9,6 +9,9 @@ use std::{ffi::OsStr, process::Command};
 use std::path::PathBuf;
 
 use clap::{Parser, Subcommand};
+use log::{info, trace, debug, warn, error};
+use toml::Table;
+
 
 #[derive(Parser)]
 #[command(version, about, long_about = None)]
@@ -16,6 +19,9 @@ struct Cli {
     /// Sets a custom config file
     #[arg(short, long, value_name = "FILE")]
     config: Option<PathBuf>,
+
+    #[arg(short, long, value_name = "FILE")]
+    ssh_private_key: Option<PathBuf>,
 
     /// Verbose level
     #[arg(short, long, action = clap::ArgAction::Count)]
@@ -65,7 +71,14 @@ struct Scope {
     registry: String,
     registry_auth_config: String,
     registry_export_auth_config: String,
+    docker_compose_overrides: Vec<String>,
+    ssh_private_key: Option<String>,
+}
+
+struct Configuration {
     path: String,
+    // current_scope: Scope,
+    environments: Vec<Scope>,
 }
 
 fn exec_command(program: &str, command: Vec<&str>, build_arg: &Vec<String>) -> Result<String, Box<dyn std::error::Error>> {
@@ -85,7 +98,7 @@ fn exec_command(program: &str, command: Vec<&str>, build_arg: &Vec<String>) -> R
     let status = output.status;
     let stdout = String::from_utf8_lossy(&output.stdout).to_string();
     let stderr = String::from_utf8_lossy(&output.stderr).to_string();
-    println!(
+    debug!(
         "Exec command: {:?} envs:{:?} args:{:?} {:?} {:?} {:?}",
         program, &envs, &args, status, stdout, stderr
     );
@@ -112,46 +125,113 @@ fn call_host(
     let status = output.status;
     let stdout = String::from_utf8_lossy(&output.stdout).to_string();
     let stderr = String::from_utf8_lossy(&output.stderr).to_string();
-    println!(
-        "Exec command: {:?} {:?} {:?} {:?} {:?}",
+    debug!(
+        "Exec remote command: {:?} {:?} {:?} {:?} {:?}",
         program, &args, status, stdout, stderr
     );
     Ok(stdout)
 }
 
+
+fn get_string_value<'a>(current: &'a Table, base: &'a Table, key: &str) -> Option<String> {
+    if current.contains_key(key) {
+        return Some(current[key].as_str().unwrap().to_string());
+    } else if base.contains_key(key) {
+        return Some(base[key].as_str().unwrap().to_string());
+    }
+    None
+}
+
+fn get_string_array_value<'a>(current: &'a Table, base: &'a Table, key: &str) -> Option<Vec<String>> {
+    if current.contains_key(key) {
+        return Some(current[key].as_array().unwrap().iter().map(|x| x.as_str().unwrap().to_string()).collect());
+    } else if base.contains_key(key) {
+        return Some(base[key].as_array().unwrap().iter().map(|x| x.as_str().unwrap().to_string()).collect());
+    }
+    None
+}
+
+fn push_parsing_scope(current: &Table, base: &Table) -> Scope {
+    let registry = get_string_value(current, base, "registry");
+    let hosts = get_string_array_value(current, base, "hosts");
+    let registry_auth_config = get_string_value(current, base, "registry_auth_config");
+    let registry_export_auth_config = get_string_value(current, base, "registry_export_auth_config");
+    let docker_compose_overrides = get_string_array_value(current, base, "docker_compose_overrides");
+    let ssh_private_key = get_string_value(current, base, "ssh_private_key");
+
+    return Scope {
+        hosts: hosts.unwrap(),
+        registry: registry.unwrap(),
+        registry_auth_config: registry_auth_config.unwrap(),
+        registry_export_auth_config: registry_export_auth_config.unwrap(),
+        docker_compose_overrides: docker_compose_overrides.unwrap(),
+        ssh_private_key: ssh_private_key,
+    };
+}
+
+fn read_configuration(path: &str) -> Result<Configuration, Box<dyn std::error::Error>> {
+    let path = std::path::Path::new(&path);
+    let file = match std::fs::read_to_string(path) {
+        Ok(f) => f,
+        Err(e) => panic!("{}", e),
+    };
+
+    let cfg: Table = file.parse().unwrap();
+
+    let mut environments: Vec<Scope> = vec![];
+    let mut base_scope = Table::new();
+
+    let val: Table = cfg["environments"].as_table().unwrap().clone();
+    for (key, value) in val.iter() {
+        if value.is_table() {
+            continue;
+        }
+        debug!("Looking into key: {:?}; Value: {:?}", key, value);
+        base_scope.insert(key.clone(), value.clone());
+    }
+
+    for (key, value) in val.iter() {
+        if !value.is_table() {
+            continue;
+        }
+        debug!("Filling into environment: {:?}", key);
+
+        let scope = push_parsing_scope(&value.as_table().unwrap(), &base_scope);
+        environments.push(scope);
+    }
+
+    let config: Configuration = Configuration {
+        path: cfg["path"].as_str().unwrap().to_string(),
+        environments: environments,
+    };
+    Ok(config)
+}
+
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let cli = Cli::parse();
 
-    if let Some(config_path) = cli.config.as_deref() {
-        println!("Value for config: {}", config_path.display());
-    }
+    env_logger::init();
 
-    match cli.verbose {
-        0 => println!("Verbose mode is off"),
-        1 => println!("Debug mode is kind of on"),
-        2 => println!("Debug mode is on"),
-        _ => println!("Don't be crazy"),
-    }
+    let config = read_configuration("tests/dkrdeliver.test.toml").expect("Could not read configuration.");
+
+    // println!("Nested bool: {:?}", cfg_bool);
 
     match &cli.command {
         Some(Commands::Build { names, build_arg }) => {
             let f = std::fs::File::open("tests/docker-compose.yaml").expect("Could not open file.");
             let format: DockerComposeFormat =
                 serde_yaml::from_reader(f).expect("Could not read values.");
-            println!("{:?}", format);
+            debug!("{:?}", format);
 
-            let _ = build(&format, &names, build_arg);
+            let _ = build(&config, &format, &names, build_arg);
         }
         Some(Commands::Deploy { names, build_arg }) => {
-            println!("names: {:?}", names);
-            println!("build_arg: {:?}", build_arg);
-
             let f = std::fs::File::open("tests/docker-compose.yaml").expect("Could not open file.");
             let format: DockerComposeFormat =
                 serde_yaml::from_reader(f).expect("Could not read values.");
-            println!("{:?}", format);
+            debug!("{:?}", format);
 
-            let _x = deploy_test_backend(&format, names, build_arg);
+            let _x = deploy(&config, &format, names, build_arg);
         }
         None => {}
     }
@@ -159,24 +239,17 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 }
 
 fn build(
+    config: &Configuration,
     format: &DockerComposeFormat,
     names: &Vec<String>,
     build_arg: &Vec<String>,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    let scope = Scope {
-        hosts: vec!["root@46.101.98.131".to_string()],
-        registry: "registry.digitalocean.com".to_string(),
-        registry_auth_config: ".secrets/docker-config.json".to_string(),
-        registry_export_auth_config: "/root/.docker/config.json".to_string(),
-        path: "tests".to_string(),
-    };
-
     let _ = exec_command(
         "docker",
         vec![
             "compose",
             "-f",
-            &(scope.path.clone() + "/docker-compose.yaml"),
+            &(config.path.clone() + "/docker-compose.yaml"),
             "-f",
             "tests/docker-compose.override-run.prod.yaml",
             "build",
@@ -188,21 +261,15 @@ fn build(
     Ok(())
 }
 
-fn deploy_test_backend(
+fn deploy(
+    config: &Configuration,
     format: &DockerComposeFormat,
     names: &Vec<String>,
     build_arg: &Vec<String>,
 ) -> Result<(), Box<dyn std::error::Error>> {
+    let scope = &config.environments[0];
     let host = RemoteHostCall {
-        private_key: Some("~/.ssh/dkrpublish_rsa".to_string()),
-    };
-
-    let scope = Scope {
-        hosts: vec!["root@46.101.98.131".to_string()],
-        registry: "registry.digitalocean.com".to_string(),
-        registry_auth_config: ".secrets/docker-config.json".to_string(),
-        registry_export_auth_config: "/root/.docker/config.json".to_string(),
-        path: "tests".to_string(),
+        private_key: scope.ssh_private_key.clone(),
     };
 
     let run_file = std::fs::File::create("tests/.dkr-generated/docker-compose.override-run.yaml")
@@ -248,7 +315,7 @@ fn deploy_test_backend(
     )
     .expect("Failed to call host.");
 
-    let _ = call_host(&host, &"scp", vec!["-r", &scope.path, &host0_path])
+    let _ = call_host(&host, &"scp", vec!["-r", &config.path, &host0_path])
         .expect("Failed to call host.");
 
     let mut deploy_command = String::new();
@@ -256,8 +323,11 @@ fn deploy_test_backend(
         deploy_command += build_arg_item;
     }
     deploy_command += " docker compose -f ";
-    deploy_command += &(scope.path.clone() + "/docker-compose.yaml");
-    deploy_command += " -f tests/docker-compose.override-run.prod.yaml";
+    deploy_command += &(config.path.clone() + "/docker-compose.yaml");
+    for override_file in &scope.docker_compose_overrides {
+        deploy_command += " -f ";
+        deploy_command += &override_file;
+    }
     deploy_command += " -f tests/.dkr-generated/docker-compose.override-run.yaml";
     deploy_command += " up -d";
 
