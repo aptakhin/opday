@@ -19,8 +19,8 @@ dkrd init
 
 dkrd local showrun
 > docker compose up -d --build -e ...
-dkrd build backend --tag "0.0.1"
-dkrd deploy backend db --env dev --tag "0.0.1"
+dkrd build backend --build-arg "BACKEND_TAG=0.0.1"
+dkrd deploy backend db --env dev --build-arg "BACKEND_TAG=0.0.1"
 ```
 
 
