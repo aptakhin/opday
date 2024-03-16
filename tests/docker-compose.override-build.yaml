@@ -1,0 +1,4 @@
+version: '3.7'
+services:
+  backend:
+    image: registry.digitalocean.com/frlr/dkrpublish/test-backend:latest

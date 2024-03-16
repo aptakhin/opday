@@ -1,1 +1,5 @@
 target/
+
+docker-config.json
+
+.dkr-generated
