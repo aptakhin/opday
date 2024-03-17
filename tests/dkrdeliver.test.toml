@@ -16,7 +16,7 @@ hosts = [
 export_path = "/root/test-backend-prod"
 
 docker_compose_overrides = [
-    "tests/docker-compose.override-run.prod.yml",
+    "tests/docker-compose.override-run.prod.yaml",
 ]
 
 

@@ -21,8 +21,29 @@ pub fn build(
         build_command_args.push(&override_file);
     }
     build_command_args.push("build");
-    build_command_args.push("backend");
-    build_command_args.push("--push");
+
+    let _ = exec_command("docker", build_command_args, build_arg);
+    Ok(())
+}
+
+pub fn push(
+    config: &Configuration,
+    _format: &DockerComposeFormat,
+    _names: &Vec<String>,
+    build_arg: &Vec<String>,
+) -> Result<(), Box<dyn std::error::Error>> {
+    let scope = &config.environments[0];
+
+    let mut build_command_args: Vec<&str> = Vec::new();
+    build_command_args.push("compose");
+    build_command_args.push("-f");
+    let binding = config.path.clone() + "/docker-compose.yaml";
+    build_command_args.push(&binding);
+    for override_file in &scope.docker_compose_overrides {
+        build_command_args.push("-f");
+        build_command_args.push(&override_file);
+    }
+    build_command_args.push("push");
 
     let _ = exec_command("docker", build_command_args, build_arg);
     Ok(())
@@ -46,20 +67,22 @@ pub fn deploy(
         services: Mapping::new(),
         volumes: Mapping::new(),
     };
-    let mut run_service_map = Mapping::new();
-    // override environment
-    // run_environment_map.insert(Value::String((&"xxx").to_string()), "yyy".into());
-    // run_environment_map.insert(Value::String((&"DATABASE_URL").to_string()), "zzz".into());
-    run_service_map.insert(Value::String((&"build").to_string()), "!reset null".into());
-    run_service_map.insert(
-        Value::String((&"environment").to_string()),
-        Value::Mapping(Mapping::new()),
-    );
 
-    run_format.services.insert(
-        Value::String((&"backend").to_string()),
-        Value::Mapping(run_service_map),
-    );
+    for service in format.services.iter() {
+        // override environment
+        let mut run_service_map = Mapping::new();
+        run_service_map.insert(Value::String((&"build").to_string()), "!reset null".into());
+        run_service_map.insert(
+            Value::String((&"environment").to_string()),
+            Value::Mapping(Mapping::new()),
+        );
+
+        run_format.services.insert(
+            Value::String(service.0.as_str().unwrap().to_owned()),
+            Value::Mapping(run_service_map),
+        );
+
+    }
     serde_yaml::to_writer(run_file, &run_format).expect("Could not write values.");
 
     let host0 = &scope.hosts[0];

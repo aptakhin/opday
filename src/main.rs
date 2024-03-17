@@ -33,8 +33,19 @@ struct Cli {
 
 #[derive(Subcommand)]
 enum Commands {
-    /// builds things
+    /// builds images
     Build {
+        /// names
+        #[arg(value_name = "NAME")]
+        names: Vec<String>,
+
+        /// build args
+        #[arg(short, long, value_name = "build-arg")]
+        build_arg: Vec<String>,
+    },
+
+    /// pushes images
+    Push {
         /// names
         #[arg(value_name = "NAME")]
         names: Vec<String>,
@@ -84,6 +95,18 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             debug!("{:?}", format);
 
             let _ = flow::build(&conf, &format, &names, build_arg);
+        }
+        Some(Commands::Push { names, build_arg }) => {
+            if config.is_none() {
+                panic!("No configuration found. Use `--config`.");
+            }
+            let conf = config.unwrap();
+            let f = std::fs::File::open(&conf.docker_compose_file).expect("Could not open file.");
+            let format: DockerComposeFormat =
+                serde_yaml::from_reader(f).expect("Could not read values.");
+            debug!("{:?}", format);
+
+            let _ = flow::push(&conf, &format, &names, build_arg);
         }
         Some(Commands::Deploy { names, build_arg }) => {
             if config.is_none() {
