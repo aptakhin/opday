@@ -1,5 +1,10 @@
+use std::path::Path;
+
 use log::debug;
 use toml::Table;
+
+use serde::{Deserialize, Serialize};
+use serde_yaml::Mapping;
 
 pub struct Scope {
     pub hosts: Vec<String>,
@@ -23,6 +28,13 @@ fn get_string_value<'a>(current: &'a Table, base: &'a Table, key: &str) -> Optio
         return Some(base[key].as_str().unwrap().to_string());
     }
     None
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct DockerComposeFormat {
+    pub version: String,
+    pub services: Mapping,
+    pub volumes: Mapping,
 }
 
 fn get_string_array_value<'a>(
@@ -115,7 +127,7 @@ pub fn read_configuration_raw(content: &str) -> Result<Configuration, Box<dyn st
     Ok(config)
 }
 
-pub fn read_configuration(path: &str) -> Result<Configuration, Box<dyn std::error::Error>> {
+pub fn read_configuration(path: &Path) -> Result<Configuration, Box<dyn std::error::Error>> {
     let path = std::path::Path::new(&path);
     let file = match std::fs::read_to_string(path) {
         Ok(f) => f,

@@ -4,7 +4,6 @@ Pipeline helpers cli
 Easy locally
 Easy in ci-cd
 
-
 Secrets.
 Port
 Remapping
@@ -23,13 +22,24 @@ dkrd build backend --build-arg "BACKEND_TAG=0.0.1"
 dkrd deploy backend db --env dev --build-arg "BACKEND_TAG=0.0.1"
 ```
 
+
+
+# Preparing host
+
+For Ubuntu docker please follow: https://docs.docker.com/engine/install/ubuntu/
+
+
+# Dev
+
+We use [pre-commit](https://pre-commit.com/).
+
+```bash
+pre-commit install
+```
+
 https://crates.io/crates/cargo-watch
 
 ```bash
 # Run tests with watch on change
 make testw
 ```
-
-# Preparing host
-
-For Ubuntu docker please follow: https://docs.docker.com/engine/install/ubuntu/

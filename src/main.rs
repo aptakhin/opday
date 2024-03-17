@@ -1,6 +1,7 @@
 use std::path::PathBuf;
 
 use clap::{Parser, Subcommand};
+use config::Configuration;
 use log::debug;
 
 mod config;
@@ -15,6 +16,7 @@ struct Cli {
     #[arg(short, long, value_name = "FILE")]
     config: Option<PathBuf>,
 
+    /// Identity file (private key) for ssh
     #[arg(short, long, value_name = "FILE")]
     ssh_private_key: Option<PathBuf>,
 
@@ -59,27 +61,42 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     env_logger::init();
 
-    let config = config::read_configuration("tests/dkrdeliver.test.toml")
-        .expect("Could not read configuration.");
+    let mut config: Option<Configuration> = None;
+    if cli.config.is_some() {
+        debug!("Using config file: {:?}", cli.config);
+        config = Some(
+            config::read_configuration(&cli.config.unwrap())
+                .expect("Could not read configuration."),
+        );
+    }
 
     // let scope = &config.environments[0];
 
     match &cli.command {
         Some(Commands::Build { names, build_arg }) => {
-            let f = std::fs::File::open(&config.docker_compose_file).expect("Could not open file.");
+            if config.is_none() {
+                panic!("No configuration found. Use `--config`.");
+            }
+            let conf = config.unwrap();
+            let f = std::fs::File::open(&conf.docker_compose_file).expect("Could not open file.");
             let format: DockerComposeFormat =
                 serde_yaml::from_reader(f).expect("Could not read values.");
             debug!("{:?}", format);
 
-            let _ = flow::build(&config, &format, &names, build_arg);
+            let _ = flow::build(&conf, &format, &names, build_arg);
         }
         Some(Commands::Deploy { names, build_arg }) => {
-            let f = std::fs::File::open(&config.docker_compose_file).expect("Could not open file.");
+            if config.is_none() {
+                panic!("No configuration found. Use `--config`.");
+            }
+            let conf = config.unwrap();
+
+            let f = std::fs::File::open(&conf.docker_compose_file).expect("Could not open file.");
             let format: DockerComposeFormat =
                 serde_yaml::from_reader(f).expect("Could not read values.");
             debug!("{:?}", format);
 
-            let _x = flow::deploy(&config, &format, names, build_arg);
+            let _x = flow::deploy(&conf, &format, names, build_arg);
         }
         None => {}
     }
