@@ -37,9 +37,13 @@ We use [pre-commit](https://pre-commit.com/).
 
 ```bash
 pre-commit install
+pre-commit
 ```
 
-https://crates.io/crates/cargo-watch
+```bash
+rustup component add clippy
+cargo binstall cargo-watch
+```
 
 ```bash
 # Run tests with watch on change

@@ -94,7 +94,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 serde_yaml::from_reader(f).expect("Could not read values.");
             debug!("{:?}", format);
 
-            let _ = flow::build(&conf, &format, &names, build_arg);
+            let _ = flow::build(&conf, &format, names, build_arg);
         }
         Some(Commands::Push { names, build_arg }) => {
             if config.is_none() {
@@ -106,7 +106,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 serde_yaml::from_reader(f).expect("Could not read values.");
             debug!("{:?}", format);
 
-            let _ = flow::push(&conf, &format, &names, build_arg);
+            let _ = flow::push(&conf, &format, names, build_arg);
         }
         Some(Commands::Deploy { names, build_arg }) => {
             if config.is_none() {

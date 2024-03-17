@@ -3,7 +3,7 @@ repos:
   rev: v2.3.0
   hooks:
   - id: check-yaml
-    files: .github/*
+    files: .github/
   - id: end-of-file-fixer
   - id: trailing-whitespace
 - repo: local
@@ -16,5 +16,10 @@ repos:
   - id: cargo-fmt
     name: cargo fmt
     entry: cargo fmt
+    language: system
+    pass_filenames: false
+  - id: cargo-clippy
+    name: cargo clippy
+    entry: cargo clippy -- -D warnings
     language: system
     pass_filenames: false

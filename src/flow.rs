@@ -6,7 +6,7 @@ use crate::exec::{call_host, exec_command, RemoteHostCall};
 pub fn build(
     config: &Configuration,
     _format: &DockerComposeFormat,
-    _names: &Vec<String>,
+    _names: &[String],
     build_arg: &Vec<String>,
 ) -> Result<(), Box<dyn std::error::Error>> {
     let scope = &config.environments[0];
@@ -18,7 +18,7 @@ pub fn build(
     build_command_args.push(&binding);
     for override_file in &scope.docker_compose_overrides {
         build_command_args.push("-f");
-        build_command_args.push(&override_file);
+        build_command_args.push(override_file);
     }
     build_command_args.push("build");
 
@@ -29,7 +29,7 @@ pub fn build(
 pub fn push(
     config: &Configuration,
     _format: &DockerComposeFormat,
-    _names: &Vec<String>,
+    _names: &[String],
     build_arg: &Vec<String>,
 ) -> Result<(), Box<dyn std::error::Error>> {
     let scope = &config.environments[0];
@@ -41,7 +41,7 @@ pub fn push(
     build_command_args.push(&binding);
     for override_file in &scope.docker_compose_overrides {
         build_command_args.push("-f");
-        build_command_args.push(&override_file);
+        build_command_args.push(override_file);
     }
     build_command_args.push("push");
 
@@ -52,7 +52,7 @@ pub fn push(
 pub fn deploy(
     config: &Configuration,
     format: &DockerComposeFormat,
-    _names: &Vec<String>,
+    _names: &[String],
     build_arg: &Vec<String>,
 ) -> Result<(), Box<dyn std::error::Error>> {
     let scope = &config.environments[0];
@@ -81,7 +81,6 @@ pub fn deploy(
             Value::String(service.0.as_str().unwrap().to_owned()),
             Value::Mapping(run_service_map),
         );
-
     }
     serde_yaml::to_writer(run_file, &run_format).expect("Could not write values.");
 
@@ -90,7 +89,7 @@ pub fn deploy(
 
     let _ = call_host(
         &host,
-        &"scp",
+        "scp",
         vec![
             &scope.registry_auth_config,
             &(host0.clone() + ":" + &scope.registry_export_auth_config),
@@ -99,12 +98,12 @@ pub fn deploy(
     .expect("Failed to call host.");
     let _ = call_host(
         &host,
-        &"ssh",
+        "ssh",
         vec![host0, &("docker login ".to_owned() + &scope.registry)],
     )
     .expect("Failed to call host.");
 
-    let _ = call_host(&host, &"scp", vec!["-r", &config.path, &host0_path])
+    let _ = call_host(&host, "scp", vec!["-r", &config.path, &host0_path])
         .expect("Failed to call host.");
 
     let mut deploy_command = String::new();
@@ -120,7 +119,7 @@ pub fn deploy(
     deploy_command += " -f tests/.dkr-generated/docker-compose.override-run.yaml";
     deploy_command += " up -d";
 
-    let _x = call_host(&host, &"ssh", vec![host0, &deploy_command]).expect("Failed to call host.");
+    let _x = call_host(&host, "ssh", vec![host0, &deploy_command]).expect("Failed to call host.");
 
     Ok(())
 }

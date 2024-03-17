@@ -6,7 +6,6 @@ use toml::Table;
 use serde::{Deserialize, Serialize};
 use serde_yaml::Mapping;
 
-
 #[derive(Debug, Serialize, Deserialize)]
 pub struct DockerComposeFormat {
     pub version: String,
@@ -16,6 +15,7 @@ pub struct DockerComposeFormat {
 
 pub struct Scope {
     pub hosts: Vec<String>,
+    pub export_path: String,
     pub registry: String,
     pub registry_auth_config: String,
     pub registry_export_auth_config: String,
@@ -29,7 +29,12 @@ pub struct Configuration {
     pub environments: Vec<Scope>,
 }
 
-fn get_string_value<'a>(current: &'a Table, base: &'a Table, key: &str, required: bool) -> Option<String> {
+fn get_string_value<'a>(
+    current: &'a Table,
+    base: &'a Table,
+    key: &str,
+    required: bool,
+) -> Option<String> {
     if current.contains_key(key) {
         return Some(current[key].as_str().unwrap().to_string());
     } else if base.contains_key(key) {
@@ -79,15 +84,17 @@ fn push_parsing_scope(current: &Table, base: &Table) -> Scope {
     let docker_compose_overrides =
         get_string_array_value(current, base, "docker_compose_overrides", true);
     let ssh_private_key = get_string_value(current, base, "ssh_private_key", false);
+    let export_path = get_string_value(current, base, "export_path", true);
 
-    return Scope {
+    Scope {
         hosts: hosts.unwrap(),
         registry: registry.unwrap(),
         registry_auth_config: registry_auth_config.unwrap(),
         registry_export_auth_config: registry_export_auth_config.unwrap(),
         docker_compose_overrides: docker_compose_overrides.unwrap(),
         ssh_private_key,
-    };
+        export_path: export_path.unwrap(),
+    }
 }
 
 pub fn read_configuration_raw(content: &str) -> Result<Configuration, Box<dyn std::error::Error>> {
@@ -121,7 +128,7 @@ pub fn read_configuration_raw(content: &str) -> Result<Configuration, Box<dyn st
         }
         debug!("Filling into environment: {:?}", key);
 
-        let scope = push_parsing_scope(&value.as_table().unwrap(), &base_scope);
+        let scope = push_parsing_scope(value.as_table().unwrap(), &base_scope);
         environments.push(scope);
     }
 
@@ -134,7 +141,7 @@ pub fn read_configuration_raw(content: &str) -> Result<Configuration, Box<dyn st
     let config: Configuration = Configuration {
         path: cfg["path"].as_str().unwrap().to_string(),
         docker_compose_file: cfg["docker_compose_file"].as_str().unwrap().to_string(),
-        environments: environments,
+        environments,
     };
     Ok(config)
 }
@@ -194,6 +201,7 @@ mod tests {
         registry_export_auth_config = "aexport_auth"
         docker_compose_overrides = ["aoverride"]
         hosts = ["ahost"]
+        export_path = "aexport_path"
 
         [environments.b]
         ssh_private_key = "bkey"
@@ -204,10 +212,23 @@ mod tests {
         let config_result = read_configuration_raw(&toml_data);
         assert_eq!(config_result.is_ok(), true);
         let config = config_result.unwrap();
-        assert_eq!(config.environments[0].ssh_private_key, Some("bkey".to_string()));
+        assert_eq!(
+            config.environments[0].ssh_private_key,
+            Some("bkey".to_string())
+        );
         assert_eq!(config.environments[0].registry, "aregistry".to_string());
-        assert_eq!(config.environments[0].registry_auth_config, "bauth".to_string());
-        assert_eq!(config.environments[0].docker_compose_overrides, vec!["aoverride"]);
+        assert_eq!(
+            config.environments[0].registry_auth_config,
+            "bauth".to_string()
+        );
+        assert_eq!(
+            config.environments[0].docker_compose_overrides,
+            vec!["aoverride"]
+        );
         assert_eq!(config.environments[0].hosts, vec!["bhost"]);
+        assert_eq!(
+            config.environments[0].export_path,
+            "aexport_path".to_string()
+        );
     }
 }

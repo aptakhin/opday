@@ -11,7 +11,7 @@ pub fn exec_command(
     command: Vec<&str>,
     build_arg: &Vec<String>,
 ) -> Result<String, Box<dyn std::error::Error>> {
-    let mut exec_command = Command::new(&program);
+    let mut exec_command = Command::new(program);
     exec_command.args(command);
     for build_arg_item in build_arg {
         let parts: Vec<&str> = build_arg_item.splitn(2, '=').collect();
@@ -48,7 +48,7 @@ pub fn call_host(
     program: &str,
     command: Vec<&str>,
 ) -> Result<String, Box<dyn std::error::Error>> {
-    let mut exec_command = Command::new(&program);
+    let mut exec_command = Command::new(program);
     if host.private_key.is_some() {
         exec_command
             .arg("-i")
