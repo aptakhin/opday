@@ -6,6 +6,8 @@ use log::debug;
 
 use serde_yaml::{Mapping, Value};
 
+use rstest::{rstest, fixture};
+
 use crate::config::{Configuration, DockerComposeFormat};
 use crate::exec::{call_host, exec_command, RemoteHostCall};
 
@@ -63,15 +65,17 @@ fn build(
     let mut build_command_args: Vec<&str> = Vec::new();
     build_command_args.push("compose");
     build_command_args.push("-f");
-    let binding = config.path.clone() + "/docker-compose.yaml";
-    build_command_args.push(&binding);
+    build_command_args.push(&config.docker_compose_file);
     for override_file in &scope.docker_compose_overrides {
         build_command_args.push("-f");
         build_command_args.push(override_file);
     }
     build_command_args.push("build");
 
-    let _ = exec_command("docker", build_command_args, build_arg);
+    let result = exec_command("docker", build_command_args, build_arg);
+    if result.is_err() {
+        panic!("Failed to build images ({})", result.err().unwrap());
+    }
     Ok(())
 }
 
@@ -189,40 +193,70 @@ pub fn docker_entrypoint(
     global_config: &Configuration,
     _build_arg: &[String],
 ) -> Result<(), Box<dyn std::error::Error>> {
+    let f = std::fs::File::open(&global_config.docker_compose_file)
+        .expect("Could not open file.");
+    let format: DockerComposeFormat =
+        serde_yaml::from_reader(f).expect("Could not read values.");
+    debug!("{:?}", format);
+
     match &command {
         DockerProviderCommands::Build {
             names, build_arg, ..
         } => {
-            let f = std::fs::File::open(&global_config.docker_compose_file)
-                .expect("Could not open file.");
-            let format: DockerComposeFormat =
-                serde_yaml::from_reader(f).expect("Could not read values.");
-            debug!("{:?}", format);
-
             let _ = build(global_config, &format, names, build_arg);
         }
         DockerProviderCommands::Push {
             names, build_arg, ..
         } => {
-            let f = std::fs::File::open(&global_config.docker_compose_file)
-                .expect("Could not open file.");
-            let format: DockerComposeFormat =
-                serde_yaml::from_reader(f).expect("Could not read values.");
-            debug!("{:?}", format);
-
             let _ = push(global_config, &format, names, build_arg);
         }
         DockerProviderCommands::Deploy {
             names, build_arg, ..
         } => {
-            let f = std::fs::File::open(&global_config.docker_compose_file)
-                .expect("Could not open file.");
-            let format: DockerComposeFormat =
-                serde_yaml::from_reader(f).expect("Could not read values.");
-            debug!("{:?}", format);
-
             let _x = deploy(global_config, &format, names, build_arg);
         }
     }
     Ok(())
+}
+
+
+mod tests {
+    use super::*;
+    use crate::config::read_configuration;
+
+    #[fixture]
+    fn simple_config() -> Configuration {
+        let config = read_configuration(&PathBuf::from("tests/dkrdeliver.test.toml"))
+            .expect("Could not read configuration.");
+        config
+    }
+
+    #[rstest]
+    #[should_panic(expected = "No config file found in not-a-file (No such file or directory (os error 2)).")]
+    fn test_no_config_file() {
+        let _ = read_configuration(&PathBuf::from("not-a-file"));
+    }
+
+    #[rstest]
+    fn test_build(simple_config: Configuration) {
+        let docker_compose = DockerComposeFormat {
+            version: "3.7".to_string(),
+            services: Mapping::new(),
+            volumes: Mapping::new(),
+        };
+        let _ = build(&simple_config, &docker_compose, &vec![], &vec!["BACKEND_TAG=0.0.1".to_owned()]);
+    }
+
+    #[rstest]
+    #[should_panic(expected = "")]
+    fn test_build_no_docker_compose(mut simple_config: Configuration) {
+        simple_config.docker_compose_file = "not-a-file".to_string();
+
+        let docker_compose = DockerComposeFormat {
+            version: "3.7".to_string(),
+            services: Mapping::new(),
+            volumes: Mapping::new(),
+        };
+        let _ = build(&simple_config, &docker_compose, &vec![], &vec![]);
+    }
 }

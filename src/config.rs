@@ -150,7 +150,9 @@ pub fn read_configuration(path: &Path) -> Result<Configuration, Box<dyn std::err
     let path = std::path::Path::new(&path);
     let file = match std::fs::read_to_string(path) {
         Ok(f) => f,
-        Err(e) => panic!("{}", e),
+        Err(e) => {
+            panic!("No config file found in {} ({}).", path.display(), e)
+        },
     };
     read_configuration_raw(&file)
 }

@@ -1,4 +1,4 @@
-use std::{ffi::OsStr, process::Command};
+use std::{ffi::OsStr, process::{Command, ExitStatus}};
 
 use log::debug;
 
@@ -40,6 +40,20 @@ pub fn exec_command(
         stdout,
         stderr
     );
+    if !status.success() {
+        return Err(Box::new(std::io::Error::new(
+            std::io::ErrorKind::Other,
+            format!(
+                "Command failed: {:?} envs:{:?} args:{:?} status:{:?} stdout:{:?} stderr:{:?}",
+                program,
+                &exec_command.get_envs(),
+                &exec_command.get_args(),
+                status,
+                stdout,
+                stderr
+            ),
+        )));
+    }
     Ok(stdout)
 }
 
