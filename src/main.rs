@@ -1,4 +1,4 @@
-use std::path::PathBuf;
+use std::{fs, path::{Path, PathBuf}};
 
 use clap::{Parser, Subcommand};
 use config::Configuration;
@@ -55,6 +55,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     env_logger::init();
 
+    let default_config_file = Path::new("dkrdeliver.toml");
+
     let mut global_config: Option<Configuration> = None;
     if cli.config.is_some() {
         debug!("Using config file: {:?}", cli.config);
@@ -86,6 +88,14 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 debug!("Using config file: {:?}", config_after_subsubcommand);
                 global_config = Some(
                     config::read_configuration(&config_after_subsubcommand.unwrap())
+                        .expect("Could not read configuration."),
+                );
+            }
+
+            if global_config.is_none() && Path::exists(&default_config_file) {
+                debug!("Using default config file: {}", default_config_file.display());
+                global_config = Some(
+                    config::read_configuration(&default_config_file)
                         .expect("Could not read configuration."),
                 );
             }

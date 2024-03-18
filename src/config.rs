@@ -135,12 +135,14 @@ pub fn read_configuration_raw(content: &str) -> Result<Configuration, Box<dyn st
     if !cfg.contains_key("path") {
         panic!("Invalid config file. No path found.");
     }
-    if !cfg.contains_key("docker_compose_file") {
-        panic!("Invalid config file. No docker_compose_file found.");
+
+    let mut docker_compose_file = "docker-compose.yaml".to_string();
+    if cfg.contains_key("docker_compose_file") {
+        docker_compose_file = cfg["docker_compose_file"].as_str().unwrap().to_string();
     }
     let config: Configuration = Configuration {
         path: cfg["path"].as_str().unwrap().to_string(),
-        docker_compose_file: cfg["docker_compose_file"].as_str().unwrap().to_string(),
+        docker_compose_file,
         environments,
     };
     Ok(config)
@@ -181,8 +183,7 @@ mod tests {
     }
 
     #[test]
-    #[should_panic(expected = "Invalid config file. No docker_compose_file found.")]
-    fn test_no_docker_compose_file() {
+    fn test_minimal_good() {
         let toml_data = r#"
         path = "path"
         [environments]

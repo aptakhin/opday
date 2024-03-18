@@ -18,6 +18,7 @@ pub enum DockerProviderCommands {
         #[arg(value_name = "NAME")]
         names: Vec<String>,
 
+        // path to config file
         #[arg(short, long, value_name = "FILE")]
         config: Option<PathBuf>,
 
@@ -31,6 +32,7 @@ pub enum DockerProviderCommands {
         #[arg(value_name = "NAME")]
         names: Vec<String>,
 
+        // path to config file
         #[arg(short, long, value_name = "FILE")]
         config: Option<PathBuf>,
 
@@ -44,6 +46,7 @@ pub enum DockerProviderCommands {
         #[arg(value_name = "NAME")]
         names: Vec<String>,
 
+        /// path to config file
         #[arg(short, long, value_name = "FILE")]
         config: Option<PathBuf>,
 
@@ -66,18 +69,27 @@ fn build(
     if config.environments.len() > 1 {
         panic!("Only one environment is supported for now.");
     }
-    let scope = &config.environments[0];
 
+    // Bake docker compose string
     let mut build_command_args: Vec<String> = Vec::new();
     build_command_args.push("compose".to_owned());
+
+    // Add user main docker compose file
     build_command_args.push("-f".to_owned());
     let docker_compose_path = Path::new(&config.path).join(&config.docker_compose_file);
     build_command_args.push(docker_compose_path.to_string_lossy().into_owned());
-    for override_file in &scope.docker_compose_overrides {
-        build_command_args.push("-f".to_owned());
-        let override_file_path = Path::new(&config.path).join(override_file);
-        build_command_args.push(override_file_path.to_string_lossy().into_owned());
+
+    // Add user override files
+    if config.environments.len() == 1 {
+        let scope = &config.environments[0];
+
+        for override_file in &scope.docker_compose_overrides {
+            build_command_args.push("-f".to_owned());
+            let override_file_path = Path::new(&config.path).join(override_file);
+            build_command_args.push(override_file_path.to_string_lossy().into_owned());
+        }
     }
+
     build_command_args.push("build".to_owned());
     let build_command_args2: Vec<&str> = build_command_args.iter().map(|s| s.as_str()).collect();
 

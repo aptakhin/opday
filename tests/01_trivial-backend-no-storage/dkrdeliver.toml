@@ -1,6 +1,3 @@
-title = "My Project"
-description = "My Project"
-
 path = "tests/01_trivial-backend-no-storage"
 docker_compose_file = "docker-compose.yaml"
 
@@ -18,10 +15,6 @@ export_path = "/root/test-backend-prod"
 docker_compose_overrides = [
     "docker-compose.override-run.prod.yaml",
 ]
-
-[environments.prod.build_arg]
-HOST = "http://example.com"
-
 
 [environments]
 
