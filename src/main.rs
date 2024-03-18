@@ -17,7 +17,7 @@ struct Cli {
     config: Option<PathBuf>,
 
     /// Identity file (private key) for ssh
-    #[arg(short, long, value_name = "FILE")]
+    #[arg(short = 'i', long, value_name = "FILE")]
     ssh_private_key: Option<PathBuf>,
 
     /// Verbose level
@@ -80,8 +80,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 .expect("Could not read configuration."),
         );
     }
-
-    // let scope = &config.environments[0];
 
     match &cli.command {
         Some(Commands::Build { names, build_arg }) => {

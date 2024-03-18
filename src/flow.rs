@@ -85,7 +85,7 @@ pub fn deploy(
     serde_yaml::to_writer(run_file, &run_format).expect("Could not write values.");
 
     let host0 = &scope.hosts[0];
-    let host0_path = scope.hosts[0].clone() + ":.";
+    let host0_path = scope.hosts[0].clone() + ":" + &scope.export_path;
 
     let _ = call_host(
         &host,
@@ -102,6 +102,7 @@ pub fn deploy(
         vec![host0, &("docker login ".to_owned() + &scope.registry)],
     )
     .expect("Failed to call host.");
+
 
     let _ = call_host(&host, "scp", vec!["-r", &config.path, &host0_path])
         .expect("Failed to call host.");
