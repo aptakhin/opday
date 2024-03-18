@@ -7,6 +7,7 @@ use log::debug;
 mod config;
 mod exec;
 mod provider;
+
 use crate::provider::docker::{docker_entrypoint, prepare_config, DockerProviderCommands};
 
 #[derive(Parser)]
@@ -103,14 +104,19 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 }
 
 mod tests {
-    #[test]
-    fn test_config_for_any_order() {
-        use super::*;
+    use super::*;
+    use rstest::rstest;
 
-        assert!(Cli::try_parse_from(vec!["docker"]).is_ok());
-        assert!(Cli::try_parse_from(vec!["", "docker", "build"]).is_ok());
-        assert!(Cli::try_parse_from(vec!["", "--config", "myconfig", "docker", "build"]).is_ok());
-        assert!(Cli::try_parse_from(vec!["", "docker", "--config", "myconfig", "build"]).is_ok());
-        assert!(Cli::try_parse_from(vec!["", "docker", "build", "--config", "myconfig"]).is_ok());
+    #[rstest(
+        args,
+        case::just_docker(vec!["docker"]),
+        case::just_docker_build(vec!["", "docker", "build"]),
+        case::config_abefore_sub_command(vec!["", "--config", "myconfig", "docker", "build"]),
+        case::config_after_sub_command(vec!["", "docker", "--config", "myconfig", "build"]),
+        case::config_after_sub_sub_command(vec!["", "docker", "build", "--config", "myconfig"]),
+        case::config_after_sub_sub_command_plus_build_arg(vec!["", "docker", "build", "--config", "myconfig", "--build-arg", "BACKEND_TAG=0.0.1"]),
+    )]
+    fn test_config_for_any_order(args: Vec<&str>) {
+        assert!(Cli::try_parse_from(args).is_ok());
     }
 }

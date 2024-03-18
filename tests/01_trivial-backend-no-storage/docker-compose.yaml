@@ -11,17 +11,5 @@ services:
       ENVIRONMENT: local
       DATABASE_URL: psycopg2://postgres:postgres@0.0.0.0:5432/postgres
 
-  postgres:
-    image: postgres:16.1-bullseye
-    restart: unless-stopped
-    ports:
-      - 5432:5432
-    volumes:
-      - ./data:/data
-    environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
-
 volumes:
   backend:
-  data:

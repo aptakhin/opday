@@ -1,4 +1,5 @@
-use std::path::PathBuf;
+use std::fs;
+use std::path::{Path, PathBuf};
 
 use clap::Subcommand;
 
@@ -46,6 +47,10 @@ pub enum DockerProviderCommands {
         #[arg(short, long, value_name = "FILE")]
         config: Option<PathBuf>,
 
+        /// environment name
+        #[arg(short = 'e', long = "env", value_name = "NAME")]
+        environment: Option<String>,
+
         /// build args
         #[arg(short, long, value_name = "build-arg")]
         build_arg: Vec<String>,
@@ -58,19 +63,25 @@ fn build(
     _names: &[String],
     build_arg: &Vec<String>,
 ) -> Result<(), Box<dyn std::error::Error>> {
+    if config.environments.len() > 1 {
+        panic!("Only one environment is supported for now.");
+    }
     let scope = &config.environments[0];
 
-    let mut build_command_args: Vec<&str> = Vec::new();
-    build_command_args.push("compose");
-    build_command_args.push("-f");
-    build_command_args.push(&config.docker_compose_file);
+    let mut build_command_args: Vec<String> = Vec::new();
+    build_command_args.push("compose".to_owned());
+    build_command_args.push("-f".to_owned());
+    let docker_compose_path = Path::new(&config.path).join(&config.docker_compose_file);
+    build_command_args.push(docker_compose_path.to_string_lossy().into_owned());
     for override_file in &scope.docker_compose_overrides {
-        build_command_args.push("-f");
-        build_command_args.push(override_file);
+        build_command_args.push("-f".to_owned());
+        let override_file_path = Path::new(&config.path).join(override_file);
+        build_command_args.push(override_file_path.to_string_lossy().into_owned());
     }
-    build_command_args.push("build");
+    build_command_args.push("build".to_owned());
+    let build_command_args2: Vec<&str> = build_command_args.iter().map(|s| s.as_str()).collect();
 
-    let result = exec_command("docker", build_command_args, build_arg);
+    let result = exec_command("docker", build_command_args2, build_arg);
     if result.is_err() {
         panic!("Failed to build images ({})", result.err().unwrap());
     }
@@ -83,20 +94,27 @@ fn push(
     _names: &[String],
     build_arg: &Vec<String>,
 ) -> Result<(), Box<dyn std::error::Error>> {
+    if config.environments.len() > 1 {
+        panic!("Only one environment is supported for now.");
+    }
     let scope = &config.environments[0];
 
-    let mut build_command_args: Vec<&str> = Vec::new();
-    build_command_args.push("compose");
-    build_command_args.push("-f");
-    let binding = config.path.clone() + "/docker-compose.yaml";
-    build_command_args.push(&binding);
-    for override_file in &scope.docker_compose_overrides {
-        build_command_args.push("-f");
-        build_command_args.push(override_file);
-    }
-    build_command_args.push("push");
+    let mut build_command_args: Vec<String> = Vec::new();
+    build_command_args.push("compose".to_owned());
 
-    let _ = exec_command("docker", build_command_args, build_arg);
+    build_command_args.push("-f".to_owned());
+    let docker_compose_path = Path::new(&config.path).join(&config.docker_compose_file);
+    build_command_args.push(docker_compose_path.to_string_lossy().into_owned());
+
+    for override_file in &scope.docker_compose_overrides {
+        build_command_args.push("-f".to_owned());
+        let docker_compose_override_path = Path::new(&config.path).join(&override_file);
+        build_command_args.push(docker_compose_override_path.to_string_lossy().into_owned());
+    }
+    build_command_args.push("push".to_owned());
+    let build_command_args2: Vec<&str> = build_command_args.iter().map(|s| s.as_str()).collect();
+
+    let _ = exec_command("docker", build_command_args2, build_arg);
     Ok(())
 }
 
@@ -106,14 +124,21 @@ fn deploy(
     _names: &[String],
     build_arg: &Vec<String>,
 ) -> Result<(), Box<dyn std::error::Error>> {
+    if config.environments.len() > 1 {
+        panic!("Only one environment is supported for now.");
+    }
     let scope = &config.environments[0];
     let host = RemoteHostCall {
         private_key: scope.ssh_private_key.clone(),
     };
 
-    let generate_file = "tests/.dkr-generated/docker-compose.override-run.yaml";
+    let generate_file_name = "docker-compose.override-run.yaml";
+    let internal_files = Path::new(&config.path).join(".dkr-generated");
+    let generated_file = internal_files.join(&generate_file_name);
 
-    let run_file = std::fs::File::create(generate_file).expect("Could not open file.");
+    let _created = fs::create_dir_all(&internal_files);
+
+    let run_file = std::fs::File::create(generated_file).expect("Could not open file.");
     let mut run_format = DockerComposeFormat {
         version: format.version.clone(),
         services: Mapping::new(),
@@ -136,6 +161,9 @@ fn deploy(
     }
     serde_yaml::to_writer(run_file, &run_format).expect("Could not write values.");
 
+    if scope.hosts.len() > 1 {
+        panic!("Only one host is supported for now.");
+    }
     let host0 = &scope.hosts[0];
     let host0_path = scope.hosts[0].clone() + ":" + &scope.export_path;
 
@@ -148,6 +176,7 @@ fn deploy(
         ],
     )
     .expect("Failed to call host.");
+
     let _ = call_host(
         &host,
         "ssh",
@@ -158,18 +187,24 @@ fn deploy(
     let _ = call_host(&host, "scp", vec!["-r", &config.path, &host0_path])
         .expect("Failed to call host.");
 
+    let internal_files_export = Path::new(&scope.export_path).join(".dkr-generated");
+
     let mut deploy_command = String::new();
     for build_arg_item in build_arg {
         deploy_command += build_arg_item;
     }
     deploy_command += " docker compose -f ";
-    deploy_command += &(config.path.clone() + "/docker-compose.yaml");
+    let docker_compose_export_path = Path::new(&scope.export_path).join(&config.docker_compose_file);
+    deploy_command += &docker_compose_export_path.to_string_lossy();
+
     for override_file in &scope.docker_compose_overrides {
         deploy_command += " -f ";
-        deploy_command += &override_file;
+        let docker_compose_override_export_path = Path::new(&scope.export_path).join(&override_file);
+        deploy_command += &docker_compose_override_export_path.to_string_lossy();
     }
     deploy_command += " -f ";
-    deploy_command += &generate_file;
+    let generate_file_export_path = internal_files_export.join(&generate_file_name);
+    deploy_command += &generate_file_export_path.to_string_lossy();
     deploy_command += " up -d";
 
     let _x = call_host(&host, "ssh", vec![host0, &deploy_command]).expect("Failed to call host.");
@@ -191,8 +226,9 @@ pub fn docker_entrypoint(
     global_config: &Configuration,
     _build_arg: &[String],
 ) -> Result<(), Box<dyn std::error::Error>> {
-    let f = std::fs::File::open(&global_config.docker_compose_file)
-        .expect("Could not open file.");
+    let docker_compose_file_path = Path::new(&global_config.path).join(&global_config.docker_compose_file);
+    let f = std::fs::File::open(&docker_compose_file_path)
+        .expect(&format!("Could not open file {}.", &docker_compose_file_path.display()));
     let format: DockerComposeFormat =
         serde_yaml::from_reader(f).expect("Could not read values.");
 
@@ -223,7 +259,7 @@ mod tests {
 
     #[fixture]
     fn simple_config() -> Configuration {
-        let config = read_configuration(&PathBuf::from("tests/dkrdeliver.test.toml"))
+        let config = read_configuration(&PathBuf::from("tests/01_trivial-backend-no-storage/dkrdeliver.toml"))
             .expect("Could not read configuration.");
         config
     }

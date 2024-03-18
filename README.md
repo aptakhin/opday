@@ -1,10 +1,10 @@
-# drkpublish (Unstable)
+# drkpublish (Unstable and not-working)
 
 DexExperience for deployment made easy.
 
 ```bash
-dkrd --config tests/dkrdeliver.test.toml docker build -- --build-arg "BACKEND_TAG=0.0.1"
-dkrd --config tests/dkrdeliver.test.toml docker deploy --env prod --build-arg "BACKEND_TAG=0.0.1"
+dkrd docker build --config tests/dkrdeliver.test.toml --build-arg "BACKEND_TAG=0.0.1"
+dkrd docker deploy --env prod --config tests/dkrdeliver.test.toml --build-arg "BACKEND_TAG=0.0.1"
 ```
 
 This tool requires local installation of another tools like: `docker`, `ssh`, `scp`.
