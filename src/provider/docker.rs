@@ -2,8 +2,6 @@ use std::path::PathBuf;
 
 use clap::Subcommand;
 
-use log::debug;
-
 use serde_yaml::{Mapping, Value};
 
 use rstest::{rstest, fixture};
@@ -197,7 +195,6 @@ pub fn docker_entrypoint(
         .expect("Could not open file.");
     let format: DockerComposeFormat =
         serde_yaml::from_reader(f).expect("Could not read values.");
-    debug!("{:?}", format);
 
     match &command {
         DockerProviderCommands::Build {
@@ -231,6 +228,15 @@ mod tests {
         config
     }
 
+    #[fixture]
+    fn simple_docker_compose() -> DockerComposeFormat {
+        DockerComposeFormat {
+            version: "3.7".to_string(),
+            services: Mapping::new(),
+            volumes: Mapping::new(),
+        }
+    }
+
     #[rstest]
     #[should_panic(expected = "No config file found in not-a-file (No such file or directory (os error 2)).")]
     fn test_no_config_file() {
@@ -238,25 +244,14 @@ mod tests {
     }
 
     #[rstest]
-    fn test_build(simple_config: Configuration) {
-        let docker_compose = DockerComposeFormat {
-            version: "3.7".to_string(),
-            services: Mapping::new(),
-            volumes: Mapping::new(),
-        };
-        let _ = build(&simple_config, &docker_compose, &vec![], &vec!["BACKEND_TAG=0.0.1".to_owned()]);
+    fn test_build(simple_config: Configuration, simple_docker_compose: DockerComposeFormat) {
+        let _ = build(&simple_config, &simple_docker_compose, &vec![], &vec!["BACKEND_TAG=0.0.1".to_owned()]);
     }
 
     #[rstest]
     #[should_panic(expected = "")]
-    fn test_build_no_docker_compose(mut simple_config: Configuration) {
+    fn test_build_no_docker_compose(mut simple_config: Configuration, simple_docker_compose: DockerComposeFormat) {
         simple_config.docker_compose_file = "not-a-file".to_string();
-
-        let docker_compose = DockerComposeFormat {
-            version: "3.7".to_string(),
-            services: Mapping::new(),
-            volumes: Mapping::new(),
-        };
-        let _ = build(&simple_config, &docker_compose, &vec![], &vec![]);
+        let _ = build(&simple_config, &simple_docker_compose, &vec![], &vec![]);
     }
 }
