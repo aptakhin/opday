@@ -24,9 +24,6 @@ struct Cli {
     #[arg(short, long, action = clap::ArgAction::Count)]
     verbose: u8,
 
-    #[arg(short, long, default_value = "false")]
-    quite: bool,
-
     #[command(subcommand)]
     provider: Option<Providers>,
 }
@@ -103,4 +100,17 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     }
 
     Ok(())
+}
+
+mod tests {
+    #[test]
+    fn test_config_for_any_order() {
+        use super::*;
+
+        assert!(Cli::try_parse_from(vec!["docker"]).is_ok());
+        assert!(Cli::try_parse_from(vec!["", "docker", "build"]).is_ok());
+        assert!(Cli::try_parse_from(vec!["", "--config", "myconfig", "docker", "build"]).is_ok());
+        assert!(Cli::try_parse_from(vec!["", "docker", "--config", "myconfig", "build"]).is_ok());
+        assert!(Cli::try_parse_from(vec!["", "docker", "build", "--config", "myconfig"]).is_ok());
+    }
 }
