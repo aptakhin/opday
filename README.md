@@ -1,35 +1,26 @@
-# drkpublish
+# drkpublish (Unstable)
 
-Services deployment made easy for people.
-
-
-
-Pipeline helpers cli
-Easy locally
-Easy in ci-cd
-
-Secrets.
-Port
-Remapping
-Nginx under balancer.
-Volumes management.
-
-Entities and ideas : https://miro.com/app/board/uXjVN3A6wi4=/?share_link_id=724804630324
-
+DexExperience for deployment made easy.
 
 ```bash
-dkrd init
-
-dkrd local showrun
-> docker compose up -d --build -e ...
-dkrd build --config tests/dkrdeliver.test.toml backend --build-arg "BACKEND_TAG=0.0.1"
-dkrd deploy --config tests/dkrdeliver.test.toml backend db --env dev --build-arg "BACKEND_TAG=0.0.1"
+dkrd --config tests/dkrdeliver.test.toml docker build -- --build-arg "BACKEND_TAG=0.0.1"
+dkrd --config tests/dkrdeliver.test.toml docker deploy --env prod --build-arg "BACKEND_TAG=0.0.1"
 ```
+
+This tool requires local installation of another tools like: `docker`, `ssh`, `scp`.
+
+# TODO
+
+* Multiple providers support (docker, databases, monitoring, S3 and other storages)
+* Secrets handling
+* Reverse-proxies configuration
+* Easy locally on dev and for CD pipelines
+
+Entities and ideas: https://miro.com/app/board/uXjVN3A6wi4=/?share_link_id=724804630324
 
 # Preparing host
 
 For Ubuntu docker please follow: https://docs.docker.com/engine/install/ubuntu/
-
 
 # Dev
 

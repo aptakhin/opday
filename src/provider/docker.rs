@@ -1,9 +1,58 @@
+use std::path::PathBuf;
+
+use clap::Subcommand;
+
+use log::debug;
+
 use serde_yaml::{Mapping, Value};
 
 use crate::config::{Configuration, DockerComposeFormat};
 use crate::exec::{call_host, exec_command, RemoteHostCall};
 
-pub fn build(
+#[derive(Subcommand)]
+pub enum DockerProviderCommands {
+    /// Build images
+    Build {
+        /// names
+        #[arg(value_name = "NAME")]
+        names: Vec<String>,
+
+        #[arg(short, long, value_name = "FILE")]
+        config: Option<PathBuf>,
+
+        /// build args
+        #[arg(short, long, value_name = "build-arg")]
+        build_arg: Vec<String>,
+    },
+    /// Pushes images
+    Push {
+        /// names
+        #[arg(value_name = "NAME")]
+        names: Vec<String>,
+
+        #[arg(short, long, value_name = "FILE")]
+        config: Option<PathBuf>,
+
+        /// build args
+        #[arg(short, long, value_name = "build-arg")]
+        build_arg: Vec<String>,
+    },
+    /// Deploys images
+    Deploy {
+        /// names
+        #[arg(value_name = "NAME")]
+        names: Vec<String>,
+
+        #[arg(short, long, value_name = "FILE")]
+        config: Option<PathBuf>,
+
+        /// build args
+        #[arg(short, long, value_name = "build-arg")]
+        build_arg: Vec<String>,
+    },
+}
+
+fn build(
     config: &Configuration,
     _format: &DockerComposeFormat,
     _names: &[String],
@@ -26,7 +75,7 @@ pub fn build(
     Ok(())
 }
 
-pub fn push(
+fn push(
     config: &Configuration,
     _format: &DockerComposeFormat,
     _names: &[String],
@@ -49,7 +98,7 @@ pub fn push(
     Ok(())
 }
 
-pub fn deploy(
+fn deploy(
     config: &Configuration,
     format: &DockerComposeFormat,
     _names: &[String],
@@ -62,8 +111,7 @@ pub fn deploy(
 
     let generate_file = "tests/.dkr-generated/docker-compose.override-run.yaml";
 
-    let run_file = std::fs::File::create(&generate_file)
-        .expect("Could not open file.");
+    let run_file = std::fs::File::create(generate_file).expect("Could not open file.");
     let mut run_format = DockerComposeFormat {
         version: format.version.clone(),
         services: Mapping::new(),
@@ -124,5 +172,57 @@ pub fn deploy(
 
     let _x = call_host(&host, "ssh", vec![host0, &deploy_command]).expect("Failed to call host.");
 
+    Ok(())
+}
+
+pub fn prepare_config(command: &DockerProviderCommands) -> Option<PathBuf> {
+    match &command {
+        DockerProviderCommands::Build { config, .. } => config.clone(),
+        DockerProviderCommands::Push { config, .. } => config.clone(),
+        DockerProviderCommands::Deploy { config, .. } => config.clone(),
+    }
+}
+
+pub fn docker_entrypoint(
+    command: &DockerProviderCommands,
+    _names: &[String],
+    global_config: &Configuration,
+    _build_arg: &[String],
+) -> Result<(), Box<dyn std::error::Error>> {
+    match &command {
+        DockerProviderCommands::Build {
+            names, build_arg, ..
+        } => {
+            let f = std::fs::File::open(&global_config.docker_compose_file)
+                .expect("Could not open file.");
+            let format: DockerComposeFormat =
+                serde_yaml::from_reader(f).expect("Could not read values.");
+            debug!("{:?}", format);
+
+            let _ = build(global_config, &format, names, build_arg);
+        }
+        DockerProviderCommands::Push {
+            names, build_arg, ..
+        } => {
+            let f = std::fs::File::open(&global_config.docker_compose_file)
+                .expect("Could not open file.");
+            let format: DockerComposeFormat =
+                serde_yaml::from_reader(f).expect("Could not read values.");
+            debug!("{:?}", format);
+
+            let _ = push(global_config, &format, names, build_arg);
+        }
+        DockerProviderCommands::Deploy {
+            names, build_arg, ..
+        } => {
+            let f = std::fs::File::open(&global_config.docker_compose_file)
+                .expect("Could not open file.");
+            let format: DockerComposeFormat =
+                serde_yaml::from_reader(f).expect("Could not read values.");
+            debug!("{:?}", format);
+
+            let _x = deploy(global_config, &format, names, build_arg);
+        }
+    }
     Ok(())
 }
