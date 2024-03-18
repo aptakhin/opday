@@ -9,6 +9,41 @@ mod exec;
 mod flow;
 use crate::config::DockerComposeFormat;
 
+
+#[derive(Subcommand)]
+pub enum DockerProviderCommands {
+    /// Build images
+    Build {
+        /// names
+        #[arg(value_name = "NAME")]
+        names: Vec<String>,
+
+        /// build args
+        #[arg(short, long, value_name = "build-arg")]
+        build_arg: Vec<String>,
+    },
+    /// Pushes images
+    Push {
+        /// names
+        #[arg(value_name = "NAME")]
+        names: Vec<String>,
+
+        /// build args
+        #[arg(short, long, value_name = "build-arg")]
+        build_arg: Vec<String>,
+    },
+    /// Deploys images
+    Deploy {
+        /// names
+        #[arg(value_name = "NAME")]
+        names: Vec<String>,
+
+        /// build args
+        #[arg(short, long, value_name = "build-arg")]
+        build_arg: Vec<String>,
+    },
+}
+
 #[derive(Parser)]
 #[command(version, about, long_about = None)]
 struct Cli {
@@ -28,35 +63,18 @@ struct Cli {
     quite: bool,
 
     #[command(subcommand)]
-    command: Option<Commands>,
+    provider: Option<Providers>,
+
 }
 
+
 #[derive(Subcommand)]
-enum Commands {
+enum Providers {
     /// builds images
-    Build {
-        /// names
-        #[arg(value_name = "NAME")]
-        names: Vec<String>,
+    Docker {
+        #[command(subcommand)]
+        command: DockerProviderCommands,
 
-        /// build args
-        #[arg(short, long, value_name = "build-arg")]
-        build_arg: Vec<String>,
-    },
-
-    /// pushes images
-    Push {
-        /// names
-        #[arg(value_name = "NAME")]
-        names: Vec<String>,
-
-        /// build args
-        #[arg(short, long, value_name = "build-arg")]
-        build_arg: Vec<String>,
-    },
-
-    /// deploys things
-    Deploy {
         /// names
         #[arg(value_name = "NAME")]
         names: Vec<String>,
@@ -81,45 +99,50 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         );
     }
 
-    match &cli.command {
-        Some(Commands::Build { names, build_arg }) => {
-            if config.is_none() {
-                panic!("No configuration found. Use `--config`.");
+    match &cli.provider {
+        Some(Providers::Docker { command, names: _, build_arg: _ }) => {
+            match &command {
+                DockerProviderCommands::Build { names, build_arg } => {
+                    if config.is_none() {
+                        panic!("No configuration found. Use `--config`.");
+                    }
+                    let conf = config.unwrap();
+                    let f = std::fs::File::open(&conf.docker_compose_file).expect("Could not open file.");
+                    let format: DockerComposeFormat =
+                        serde_yaml::from_reader(f).expect("Could not read values.");
+                    debug!("{:?}", format);
+
+                    let _ = flow::build(&conf, &format, names, build_arg);
+                }
+                DockerProviderCommands::Push { names, build_arg } => {
+                    if config.is_none() {
+                        panic!("No configuration found. Use `--config`.");
+                    }
+                    let conf = config.unwrap();
+                    let f = std::fs::File::open(&conf.docker_compose_file).expect("Could not open file.");
+                    let format: DockerComposeFormat =
+                        serde_yaml::from_reader(f).expect("Could not read values.");
+                    debug!("{:?}", format);
+
+                    let _ = flow::push(&conf, &format, names, build_arg);
+                }
+                DockerProviderCommands::Deploy { names, build_arg } => {
+                    if config.is_none() {
+                        panic!("No configuration found. Use `--config`.");
+                    }
+                    let conf = config.unwrap();
+
+                    let f = std::fs::File::open(&conf.docker_compose_file).expect("Could not open file.");
+                    let format: DockerComposeFormat =
+                        serde_yaml::from_reader(f).expect("Could not read values.");
+                    debug!("{:?}", format);
+
+                    let _x = flow::deploy(&conf, &format, names, build_arg);
+                }
             }
-            let conf = config.unwrap();
-            let f = std::fs::File::open(&conf.docker_compose_file).expect("Could not open file.");
-            let format: DockerComposeFormat =
-                serde_yaml::from_reader(f).expect("Could not read values.");
-            debug!("{:?}", format);
-
-            let _ = flow::build(&conf, &format, names, build_arg);
         }
-        Some(Commands::Push { names, build_arg }) => {
-            if config.is_none() {
-                panic!("No configuration found. Use `--config`.");
-            }
-            let conf = config.unwrap();
-            let f = std::fs::File::open(&conf.docker_compose_file).expect("Could not open file.");
-            let format: DockerComposeFormat =
-                serde_yaml::from_reader(f).expect("Could not read values.");
-            debug!("{:?}", format);
-
-            let _ = flow::push(&conf, &format, names, build_arg);
-        }
-        Some(Commands::Deploy { names, build_arg }) => {
-            if config.is_none() {
-                panic!("No configuration found. Use `--config`.");
-            }
-            let conf = config.unwrap();
-
-            let f = std::fs::File::open(&conf.docker_compose_file).expect("Could not open file.");
-            let format: DockerComposeFormat =
-                serde_yaml::from_reader(f).expect("Could not read values.");
-            debug!("{:?}", format);
-
-            let _x = flow::deploy(&conf, &format, names, build_arg);
-        }
-        None => {}
+        _ => {}
     }
+
     Ok(())
 }

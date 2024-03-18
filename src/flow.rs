@@ -60,7 +60,9 @@ pub fn deploy(
         private_key: scope.ssh_private_key.clone(),
     };
 
-    let run_file = std::fs::File::create("tests/.dkr-generated/docker-compose.override-run.yaml")
+    let generate_file = "tests/.dkr-generated/docker-compose.override-run.yaml";
+
+    let run_file = std::fs::File::create(&generate_file)
         .expect("Could not open file.");
     let mut run_format = DockerComposeFormat {
         version: format.version.clone(),
@@ -103,7 +105,6 @@ pub fn deploy(
     )
     .expect("Failed to call host.");
 
-
     let _ = call_host(&host, "scp", vec!["-r", &config.path, &host0_path])
         .expect("Failed to call host.");
 
@@ -117,7 +118,8 @@ pub fn deploy(
         deploy_command += " -f ";
         deploy_command += &override_file;
     }
-    deploy_command += " -f tests/.dkr-generated/docker-compose.override-run.yaml";
+    deploy_command += " -f ";
+    deploy_command += &generate_file;
     deploy_command += " up -d";
 
     let _x = call_host(&host, "ssh", vec![host0, &deploy_command]).expect("Failed to call host.");
