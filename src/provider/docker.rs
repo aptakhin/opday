@@ -12,47 +12,83 @@ use crate::exec::{call_host, exec_command, RemoteHostCall};
 pub enum DockerProviderCommands {
     /// Build images
     Build {
-        /// names
+        /// Names
         #[arg(value_name = "NAME")]
         names: Vec<String>,
 
-        // path to config file
+        // Path to config file
         #[arg(short, long, value_name = "FILE")]
         config: Option<PathBuf>,
 
-        /// build args
+        /// Build args
         #[arg(short, long, value_name = "build-arg")]
         build_arg: Vec<String>,
     },
     /// Pushes images
     Push {
-        /// names
+        /// Names
         #[arg(value_name = "NAME")]
         names: Vec<String>,
 
-        // path to config file
+        // Path to config file
         #[arg(short, long, value_name = "FILE")]
         config: Option<PathBuf>,
 
-        /// build args
+        /// Build args
         #[arg(short, long, value_name = "build-arg")]
         build_arg: Vec<String>,
     },
     /// Deploys images
     Deploy {
-        /// names
+        /// Names
         #[arg(value_name = "NAME")]
         names: Vec<String>,
 
-        /// path to config file
+        /// Path to config file
         #[arg(short, long, value_name = "FILE")]
         config: Option<PathBuf>,
 
-        /// environment name
+        /// Environment name
         #[arg(short = 'e', long = "env", value_name = "NAME")]
         environment: Option<String>,
 
-        /// build args
+        /// Build args
+        #[arg(short, long, value_name = "build-arg")]
+        build_arg: Vec<String>,
+    },
+    /// Builds and pushes images
+    BuildPush {
+        /// Names
+        #[arg(value_name = "NAME")]
+        names: Vec<String>,
+
+        /// Path to config file
+        #[arg(short, long, value_name = "FILE")]
+        config: Option<PathBuf>,
+
+        /// Environment name
+        #[arg(short = 'e', long = "env", value_name = "NAME")]
+        environment: Option<String>,
+
+        /// Build args
+        #[arg(short, long, value_name = "build-arg")]
+        build_arg: Vec<String>,
+    },
+    /// Builds, pushes and deploys images
+    BuildPushDeploy {
+        /// Names
+        #[arg(value_name = "NAME")]
+        names: Vec<String>,
+
+        /// Path to config file
+        #[arg(short, long, value_name = "FILE")]
+        config: Option<PathBuf>,
+
+        /// Environment name
+        #[arg(short = 'e', long = "env", value_name = "NAME")]
+        environment: Option<String>,
+
+        /// Build args
         #[arg(short, long, value_name = "build-arg")]
         build_arg: Vec<String>,
     },
@@ -143,7 +179,7 @@ fn deploy(
     };
 
     let generate_file_name = "docker-compose.override-run.yaml";
-    let internal_files = Path::new(&config.path).join(".dkr-generated");
+    let internal_files = Path::new(&config.path).join(".opday-generated");
     let generated_file = internal_files.join(generate_file_name);
 
     let _created = fs::create_dir_all(&internal_files);
@@ -197,7 +233,7 @@ fn deploy(
     let _ = call_host(&host, "scp", vec!["-r", &config.path, &host0_path])
         .expect("Failed to call host.");
 
-    let internal_files_export = Path::new(&scope.export_path).join(".dkr-generated");
+    let internal_files_export = Path::new(&scope.export_path).join(".opday-generated");
 
     let mut deploy_command = String::new();
     for build_arg_item in build_arg {
@@ -229,6 +265,8 @@ pub fn prepare_config(command: &DockerProviderCommands) -> Option<PathBuf> {
         DockerProviderCommands::Build { config, .. } => config.clone(),
         DockerProviderCommands::Push { config, .. } => config.clone(),
         DockerProviderCommands::Deploy { config, .. } => config.clone(),
+        DockerProviderCommands::BuildPush { config, .. } => config.clone(),
+        DockerProviderCommands::BuildPushDeploy { config, .. } => config.clone(),
     }
 }
 
@@ -262,7 +300,20 @@ pub fn docker_entrypoint(
         DockerProviderCommands::Deploy {
             names, build_arg, ..
         } => {
-            let _x = deploy(global_config, &format, names, build_arg);
+            let _ = deploy(global_config, &format, names, build_arg);
+        }
+        DockerProviderCommands::BuildPush {
+            names, build_arg, ..
+        } => {
+            let _ = build(global_config, &format, names, build_arg);
+            let _ = push(global_config, &format, names, build_arg);
+        }
+        DockerProviderCommands::BuildPushDeploy {
+            names, build_arg, ..
+        } => {
+            let _ = build(global_config, &format, names, build_arg);
+            let _ = push(global_config, &format, names, build_arg);
+            let _ = deploy(global_config, &format, names, build_arg);
         }
     }
     Ok(())

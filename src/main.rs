@@ -31,19 +31,21 @@ struct Cli {
 
 #[derive(Subcommand)]
 enum Providers {
-    /// builds images
+    /// Docker provider
     Docker {
+        /// Subcommand
         #[command(subcommand)]
         command: DockerProviderCommands,
 
-        /// names
+        /// Names
         #[arg(value_name = "NAME")]
         names: Vec<String>,
 
+        /// Sets a custom config file
         #[arg(short, long, value_name = "FILE")]
         config: Option<PathBuf>,
 
-        /// build args
+        /// Build args
         #[arg(short, long, value_name = "build-arg")]
         build_arg: Vec<String>,
     },
@@ -55,7 +57,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     env_logger::init();
 
-    let default_config_file = Path::new("dkrdeliver.toml");
+    let default_config_file = Path::new("opday.toml");
 
     let mut global_config: Option<Configuration> = None;
     if cli.config.is_some() {
@@ -104,7 +106,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             }
 
             if global_config.is_none() {
-                panic!("No configuration found. Use `--config`.");
+                panic!("No configuration found. Use `--config` or file `opday.toml` in the current directory.");
             }
             let global_config_unwrap = global_config.unwrap();
 
@@ -129,6 +131,8 @@ mod tests {
         case::config_after_sub_command(vec!["", "docker", "--config", "myconfig", "build"]),
         case::config_after_sub_sub_command(vec!["", "docker", "build", "--config", "myconfig"]),
         case::config_after_sub_sub_command_plus_build_arg(vec!["", "docker", "build", "--config", "myconfig", "--build-arg", "BACKEND_TAG=0.0.1"]),
+        case::build_push(vec!["", "docker", "build-push"]),
+        case::build_push_deploy(vec!["", "docker", "build-push-deploy"]),
     )]
     fn test_config_for_any_order(args: Vec<&str>) {
         assert!(Cli::try_parse_from(args).is_ok());

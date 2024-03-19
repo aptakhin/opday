@@ -118,20 +118,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "acbf1af155f9b9ef647e42cdc158db4b64a1b61f743629225fde6f3e0be2a7c7"
 
 [[package]]
-name = "dkrd"
-version = "0.1.0"
-dependencies = [
- "clap",
- "env_logger",
- "log",
- "rstest",
- "serde",
- "serde_json",
- "serde_yaml",
- "toml",
-]
-
-[[package]]
 name = "env_filter"
 version = "0.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -306,6 +292,20 @@ name = "memchr"
 version = "2.7.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "523dc4f511e55ab87b694dc30d0f820d60906ef06413f93d4d7a1385599cc149"
+
+[[package]]
+name = "opday"
+version = "0.1.0"
+dependencies = [
+ "clap",
+ "env_logger",
+ "log",
+ "rstest",
+ "serde",
+ "serde_json",
+ "serde_yaml",
+ "toml",
+]
 
 [[package]]
 name = "pin-project-lite"

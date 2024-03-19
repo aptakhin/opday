@@ -1,7 +1,7 @@
 version: '3.7'
 services:
   backend:
-    image: registry.digitalocean.com/frlr/dkrpublish/02-backend:${BACKEND_TAG}
+    image: registry.digitalocean.com/frlr/opday/02-backend:${BACKEND_TAG}
     command: uvicorn app:app --host 0.0.0.0 --port 8000
     restart: unless-stopped
     ports:
