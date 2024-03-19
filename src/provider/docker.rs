@@ -204,6 +204,7 @@ fn deploy(
     let mut deploy_command = String::new();
     for build_arg_item in build_arg {
         deploy_command += build_arg_item;
+        deploy_command += " ";
     }
     deploy_command += " docker compose -f ";
     let docker_compose_export_path = Path::new(&scope.export_path).join(&config.docker_compose_file);

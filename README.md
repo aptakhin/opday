@@ -1,4 +1,4 @@
-# drkpublish (Unstable and not-working)
+# drkpublish (Unstable, not-working and use on your own risk)
 
 DexExperience for deployment made easy.
 

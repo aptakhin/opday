@@ -1,5 +1,4 @@
-path = "tests/01_trivial-backend-no-storage"
-docker_compose_file = "docker-compose.yaml"
+path = "tests/02_simple-backend-with-database"
 
 [environments]
 ssh_private_key = "~/.ssh/dkrpublish_rsa"
@@ -12,7 +11,11 @@ hosts = [
     "root@46.101.98.131",
 ]
 
-export_path = "/root/test-01"
+export_path = "/root/test-02"
+
 docker_compose_overrides = [
-    "docker-compose.override-run.prod.yaml",
+    "tests/docker-compose.override-run.prod.yaml",
 ]
+
+[environments.prod.build_arg]
+HOST = "http://example.com"
