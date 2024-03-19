@@ -1,0 +1,19 @@
+[tool.poetry]
+name = "test-backend"
+version = "0.1.0"
+description = ""
+authors = ["Alexander Ptakhin <me@aptakhin.name>"]
+license = "MIT"
+readme = "README.md"
+packages = [{include = "fl_core"}]
+
+[tool.poetry.dependencies]
+python = "^3.10"
+fastapi = "~=0.0"
+httpx = "~=0.0"
+uvicorn = "~=0.0"
+asyncpg = "~=0.0"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"

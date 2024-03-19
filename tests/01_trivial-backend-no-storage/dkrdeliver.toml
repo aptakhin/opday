@@ -1,0 +1,18 @@
+path = "tests/01_trivial-backend-no-storage"
+docker_compose_file = "docker-compose.yaml"
+
+[environments]
+ssh_private_key = "~/.ssh/dkrpublish_rsa"
+registry = "registry.digitalocean.com"
+registry_auth_config = ".secrets/docker-config.json"
+registry_export_auth_config = "/root/.docker/config.json"
+
+[environments.prod]
+hosts = [
+    "root@46.101.98.131",
+]
+
+export_path = "/root/test-01"
+docker_compose_overrides = [
+    "docker-compose.override-run.prod.yaml",
+]

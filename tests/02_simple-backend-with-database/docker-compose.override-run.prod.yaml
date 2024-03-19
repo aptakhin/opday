@@ -1,0 +1,12 @@
+version: '3.7'
+services:
+  backend:
+    image: registry.digitalocean.com/frlr/dkrpublish/02-backend:${BACKEND_TAG}
+    command: uvicorn app:app --host 0.0.0.0 --port 8000
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    volumes: !reset []
+    environment:
+      ENVIRONMENT: prod
+      DATABASE_URL: psycopg2://postgres:postgres@0.0.0.0:5432/postgres
