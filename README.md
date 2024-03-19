@@ -34,6 +34,7 @@ pre-commit
 ```bash
 rustup component add clippy
 cargo binstall cargo-watch
+cargo install cargo-sort
 ```
 
 ```bash

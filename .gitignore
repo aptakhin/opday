@@ -2,3 +2,4 @@ target/
 .dkr-generated
 .secrets/*
 dkrd
+cargo
