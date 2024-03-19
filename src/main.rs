@@ -1,4 +1,4 @@
-use std::{fs, path::{Path, PathBuf}};
+use std::path::{Path, PathBuf};
 
 use clap::{Parser, Subcommand};
 use config::Configuration;
@@ -92,10 +92,13 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 );
             }
 
-            if global_config.is_none() && Path::exists(&default_config_file) {
-                debug!("Using default config file: {}", default_config_file.display());
+            if global_config.is_none() && Path::exists(default_config_file) {
+                debug!(
+                    "Using default config file: {}",
+                    default_config_file.display()
+                );
                 global_config = Some(
-                    config::read_configuration(&default_config_file)
+                    config::read_configuration(default_config_file)
                         .expect("Could not read configuration."),
                 );
             }
@@ -113,6 +116,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     Ok(())
 }
 
+#[cfg(test)]
 mod tests {
     use super::*;
     use rstest::rstest;

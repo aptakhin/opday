@@ -1,4 +1,4 @@
-use std::{ffi::OsStr, process::{Command}};
+use std::{ffi::OsStr, process::Command};
 
 use log::debug;
 
@@ -84,8 +84,10 @@ pub fn call_host(
     if !status.success() {
         return Err(Box::new(std::io::Error::new(
             std::io::ErrorKind::Other,
-            format!("Exec remote command: {:?} {:?} {:?} {:?} {:?}",
-            program, &args, status, stdout, stderr),
+            format!(
+                "Exec remote command: {:?} {:?} {:?} {:?} {:?}",
+                program, &args, status, stdout, stderr
+            ),
         )));
     }
     Ok(stdout)
