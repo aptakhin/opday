@@ -17,6 +17,8 @@ jobs:
     - uses: actions/checkout@v3
     - name: Build
       run: cargo build --verbose
+    - name: Link to local cargo
+      run: ln -s `which cargo`
     - name: Lint
       run: make lint
     - name: Run tests
