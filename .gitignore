@@ -1,5 +1,4 @@
 target/
-.opday-generated
 .secrets/*
 opday
 cargo

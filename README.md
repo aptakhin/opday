@@ -1,4 +1,4 @@
-# drkpublish (Unstable, not-working and use on your own risk)
+# opday (Unstable, not-working and use on your own risk)
 
 Dex(Ops)Experience for deployments and other ops operations made easy.
 
@@ -23,11 +23,11 @@ EOL
 opday docker build-push-deploy --build-arg "BACKEND_TAG=0.0.1"
 ```
 
-This tool requires local installation of another tools like: `docker`, `ssh`, `scp`.
+This tool requires local installation of another tools and their availability in the shell: `docker`, `ssh`, `scp`.
 
 # The idea
 
-This tool prioritizes simplicity and imperativeness over scaling and decorativeness. It provides a simple yet flexible way to maintain basic Ops operations and automates its own infrastructure. The main features are based on `docker` and `docker compose`.
+This tool prioritizes simplicity and imperativeness over scaling and decorativeness. It provides a simple yet flexible way to maintain basic Ops operations and automates its own infrastructure. There are plenty amount of `deploy.sh` scripts we might write manually or tools like [umputun/spot](https://github.com/umputun/spot), [Kamal](https://kamal-deploy.org/) or Ansible. Usage of some of them might be overkill, but also I don't want to force people to learn one more DSL for this obvious deployment stuff. This time might be spent on learning better new programming language, Kubernetes or speaking language :) Hence, the main features are based on `docker` and `docker compose`.
 
 * Allocation of resources on virtual private and dedicated servers
 * Multiple providers support (docker, databases, monitoring, S3, and other storages)
