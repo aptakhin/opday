@@ -10,6 +10,12 @@ fmt::
 lint::
 	./cargo clippy -- -D warnings
 
+doc::
+	./cargo doc --no-deps
+
+docw::
+	./cargo watch -x doc --no-deps
+
 a01::
 	RUST_LOG=debug RUST_BACKTRACE=1 ./cargo run -- docker build-push-deploy --build-arg BACKEND_TAG=0.0.4 --config tests/01_trivial-backend-no-storage/opday.toml
 
