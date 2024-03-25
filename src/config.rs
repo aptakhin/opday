@@ -10,7 +10,7 @@ use serde_yaml::Mapping;
 pub struct DockerComposeFormat {
     pub version: String,
     pub services: Mapping,
-    pub volumes: Mapping,
+    pub volumes: Option<Mapping>,
 }
 
 pub struct Scope {
@@ -109,31 +109,30 @@ pub fn read_configuration_raw(content: &str) -> Result<Configuration, Box<dyn st
     let mut environments: Vec<Scope> = vec![];
     let mut base_scope = Table::new();
 
-    if !cfg.contains_key("environments") {
-        panic!("Invalid config file. No environments found.");
-    }
-
-    let val: Table = cfg["environments"].as_table().unwrap().clone();
-    for (key, value) in val.iter() {
-        if value.is_table() {
-            continue;
+    if cfg.contains_key("environments") {
+        let val: Table = cfg["environments"].as_table().unwrap().clone();
+        for (key, value) in val.iter() {
+            if value.is_table() {
+                continue;
+            }
+            debug!("Looking into key: {:?}; Value: {:?}", key, value);
+            base_scope.insert(key.clone(), value.clone());
         }
-        debug!("Looking into key: {:?}; Value: {:?}", key, value);
-        base_scope.insert(key.clone(), value.clone());
-    }
 
-    for (key, value) in val.iter() {
-        if !value.is_table() {
-            continue;
+        for (key, value) in val.iter() {
+            if !value.is_table() {
+                continue;
+            }
+            debug!("Filling into environment: {:?}", key);
+
+            let scope = push_parsing_scope(value.as_table().unwrap(), &base_scope);
+            environments.push(scope);
         }
-        debug!("Filling into environment: {:?}", key);
-
-        let scope = push_parsing_scope(value.as_table().unwrap(), &base_scope);
-        environments.push(scope);
     }
 
-    if !cfg.contains_key("path") {
-        panic!("Invalid config file. No path found.");
+    let mut path = ".".to_string();
+    if cfg.contains_key("path") {
+        path = cfg["path"].as_str().unwrap().to_string();
     }
 
     let mut docker_compose_file = "docker-compose.yaml".to_string();
@@ -141,7 +140,7 @@ pub fn read_configuration_raw(content: &str) -> Result<Configuration, Box<dyn st
         docker_compose_file = cfg["docker_compose_file"].as_str().unwrap().to_string();
     }
     let config: Configuration = Configuration {
-        path: cfg["path"].as_str().unwrap().to_string(),
+        path,
         docker_compose_file,
         environments,
     };
@@ -164,7 +163,6 @@ mod tests {
     use super::*;
 
     #[test]
-    #[should_panic(expected = "Invalid config file. No environments found.")]
     fn test_empty_configuration() {
         let toml_data = r#"
         "#;
@@ -173,7 +171,6 @@ mod tests {
     }
 
     #[test]
-    #[should_panic(expected = "Invalid config file. No path found.")]
     fn test_no_path() {
         let toml_data = r#"
         [environments]
