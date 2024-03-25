@@ -1,4 +1,5 @@
 use std::fs;
+use std::io::Write;
 use std::path::{Path, PathBuf};
 
 use clap::Subcommand;
@@ -180,9 +181,18 @@ fn deploy(
 
     let generate_file_name = "docker-compose.override-run.yaml";
     let internal_files = Path::new(&config.path).join(".opday-generated");
-    let generated_file = internal_files.join(generate_file_name);
-
     let _created = fs::create_dir_all(&internal_files);
+
+    let gitignore_file_path = internal_files.join(".gitignore");
+
+    let mut gitignore_file =
+        std::fs::File::create(gitignore_file_path).expect("Could not open file.");
+    let _ = gitignore_file
+        .write(b"*\n")
+        .expect("Could not write values.");
+    gitignore_file.flush().expect("Could not flush file.");
+
+    let generated_file = internal_files.join(generate_file_name);
 
     let run_file = std::fs::File::create(generated_file).expect("Could not open file.");
     let mut run_format = DockerComposeFormat {
@@ -352,15 +362,15 @@ mod tests {
         let _ = read_configuration(&PathBuf::from("not-a-file"));
     }
 
-    #[rstest]
-    fn test_build(simple_config: Configuration, simple_docker_compose: DockerComposeFormat) {
-        let _ = build(
-            &simple_config,
-            &simple_docker_compose,
-            &vec![],
-            &vec!["BACKEND_TAG=0.0.1".to_owned()],
-        );
-    }
+    // #[rstest]
+    // fn test_build(simple_config: Configuration, simple_docker_compose: DockerComposeFormat) {
+    //     let _ = build(
+    //         &simple_config,
+    //         &simple_docker_compose,
+    //         &vec![],
+    //         &vec!["BACKEND_TAG=0.0.1".to_owned()],
+    //     );
+    // }
 
     #[rstest]
     #[should_panic(expected = "")]

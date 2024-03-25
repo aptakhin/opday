@@ -5,6 +5,7 @@ use config::Configuration;
 use log::debug;
 
 mod config;
+mod doc;
 mod exec;
 mod provider;
 
