@@ -14,7 +14,7 @@ hosts = [
 export_path = "/root/test-02"
 
 docker_compose_overrides = [
-    "tests/docker-compose.override-run.prod.yaml",
+    "docker-compose.override-run.prod.yaml",
 ]
 
 [environments.prod.build_arg]

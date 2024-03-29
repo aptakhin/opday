@@ -107,7 +107,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             }
 
             if global_config.is_none() {
-                panic!("No configuration found. Use `--config` or file `opday.toml` in the current directory.");
+                global_config = Some(config::read_configuration_raw("")?);
             }
             let global_config_unwrap = global_config.unwrap();
 
