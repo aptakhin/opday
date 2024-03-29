@@ -9,4 +9,10 @@ services:
     volumes: !reset []
     environment:
       ENVIRONMENT: prod
-      DATABASE_URL: psycopg2://postgres:postgres@0.0.0.0:5432/postgres
+      DATABASE_URL: psycopg2://postgres:postgres@postgres:5432/postgres
+
+  nginx:
+    image: registry.digitalocean.com/frlr/opday/02-nginx:${NGINX_TAG}
+    ports:
+    - "80:80"
+    - "443:443"

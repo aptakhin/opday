@@ -1,6 +1,6 @@
 # Getting Started Guide
 
-Make docker compose for your backend or nginx:
+Make docker compose for default nginx:
 
 ```bash
 cat > docker-compose.yaml << EOL
@@ -10,14 +10,6 @@ services:
     image: nginx:latest
     ports:
     - "80:80"
-EOL
-```
-
-Make `opday.toml` config:
-
-```bash
-cat > opday.toml << EOL
-path = "."
 EOL
 ```
 

@@ -9,7 +9,7 @@ use serde_yaml::{Mapping, Value};
 extern crate term;
 
 use crate::config::{Configuration, DockerComposeFormat};
-use crate::exec::{exec_command_with_threaded_read, RemoteHostCall};
+use crate::exec::{execute_command, RemoteHostCall};
 
 #[derive(Subcommand)]
 pub enum DockerProviderCommands {
@@ -130,9 +130,9 @@ fn build(
     build_command_args.push("build".to_owned());
     let build_command_args2: Vec<&str> = build_command_args.iter().map(|s| s.as_str()).collect();
 
-    let result = exec_command_with_threaded_read("docker", build_command_args2, build_arg);
+    let result = execute_command("docker", build_command_args2, build_arg);
     if result.is_err() {
-        panic!("Failed to build images ()"); //, result.await.err().unwrap());
+        panic!("Failed to build images ()");
     }
     Ok(())
 }
@@ -163,7 +163,7 @@ fn push(
     build_command_args.push("push".to_owned());
     let build_command_args2: Vec<&str> = build_command_args.iter().map(|s| s.as_str()).collect();
 
-    let _ = exec_command_with_threaded_read("docker", build_command_args2, build_arg);
+    let _ = execute_command("docker", build_command_args2, build_arg);
     Ok(())
 }
 
@@ -225,6 +225,7 @@ fn deploy(
     let host0 = &scope.hosts[0];
     let host0_path = scope.hosts[0].clone() + ":" + &scope.export_path;
 
+    // scp docker registry auth
     {
         let mut params: Vec<&str> = vec![];
         if host.private_key.is_some() {
@@ -234,10 +235,10 @@ fn deploy(
         params.push(&scope.registry_auth_config);
         let reg = host0.clone() + ":" + &scope.registry_export_auth_config;
         params.push(&reg);
-        let _ =
-            exec_command_with_threaded_read("scp", params, &vec![]).expect("Failed to call host.");
+        let _ = execute_command("scp", params, &vec![]).expect("Failed to call host.");
     }
 
+    // docker login for registry
     {
         let mut params: Vec<&str> = vec![];
         if host.private_key.is_some() {
@@ -247,10 +248,12 @@ fn deploy(
         params.push(host0.as_str());
         let str = "docker login ".to_owned() + &scope.registry;
         params.push(&str);
-        let _ =
-            exec_command_with_threaded_read("ssh", params, &vec![]).expect("Failed to call host.");
+        let _ = execute_command("ssh", params, &vec![]).expect("Failed to call host.");
     }
 
+    // copy all context docker compose files
+    let src_path_ensure_last_slash = Path::new(&config.path).join("");
+    let src_path_ensure_last_slash_string = src_path_ensure_last_slash.to_string_lossy();
     {
         let mut params: Vec<&str> = vec![];
         if host.private_key.is_some() {
@@ -258,10 +261,9 @@ fn deploy(
             params.push(host.private_key.as_ref().unwrap());
         }
         params.push("-r");
-        params.push(&config.path);
+        params.push(src_path_ensure_last_slash_string.as_ref());
         params.push(&host0_path);
-        let _ =
-            exec_command_with_threaded_read("scp", params, &vec![]).expect("Failed to call host.");
+        let _ = execute_command("scp", params, &vec![]).expect("Failed to call host.");
     }
 
     let internal_files_export = Path::new(&scope.export_path).join(".opday-generated");
@@ -294,8 +296,7 @@ fn deploy(
         }
         params.push(host0);
         params.push(&deploy_command);
-        let _ =
-            exec_command_with_threaded_read("ssh", params, &vec![]).expect("Failed to call host.");
+        let _ = execute_command("ssh", params, &vec![]).expect("Failed to call host.");
     }
 
     Ok(())
@@ -393,6 +394,7 @@ mod tests {
         let _ = read_configuration(&PathBuf::from("not-a-file"));
     }
 
+    // does not work on pre-commit
     // #[rstest]
     // fn test_build(simple_config: Configuration, simple_docker_compose: DockerComposeFormat) {
     //     let _ = build(

@@ -75,7 +75,7 @@ fn get_string_array_value<'a>(
     None
 }
 
-fn push_parsing_scope(current: &Table, base: &Table) -> Scope {
+fn make_parsing_scope(current: &Table, base: &Table) -> Scope {
     let registry = get_string_value(current, base, "registry", true);
     let hosts = get_string_array_value(current, base, "hosts", true);
     let registry_auth_config = get_string_value(current, base, "registry_auth_config", true);
@@ -125,7 +125,7 @@ pub fn read_configuration_raw(content: &str) -> Result<Configuration, Box<dyn st
             }
             debug!("Filling into environment: {:?}", key);
 
-            let scope = push_parsing_scope(value.as_table().unwrap(), &base_scope);
+            let scope = make_parsing_scope(value.as_table().unwrap(), &base_scope);
             environments.push(scope);
         }
     }
@@ -212,6 +212,7 @@ mod tests {
         let config_result = read_configuration_raw(&toml_data);
         assert_eq!(config_result.is_ok(), true);
         let config = config_result.unwrap();
+        assert_eq!(config.environments.len(), 1);
         assert_eq!(
             config.environments[0].ssh_private_key,
             Some("bkey".to_string())

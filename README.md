@@ -2,25 +2,23 @@
 
 Dex(Ops)Experience for deployments and other ops operations made easy.
 
+Make docker compose for default nginx:
+
 ```bash
-cat > opday.toml << EOL
-path = "tests/01_trivial-backend-no-storage"
-
-[environments]
-registry = "registry.digitalocean.com"
-registry_auth_config = ".secrets/docker-config.json"
-registry_export_auth_config = "/root/.docker/config.json"
-
-[environments.prod]
-hosts = [
-    "root@46.101.98.131",
-]
-
-export_path = "/root/test-01"
-docker_compose_overrides = []
+cat > docker-compose.yaml << EOL
+version: "3.7"
+services:
+  nginx:
+    image: nginx:latest
+    ports:
+    - "80:80"
 EOL
+```
 
-opday docker build-push-deploy --build-arg "BACKEND_TAG=0.0.1"
+Let's call build now:
+
+```bash
+opday docker build
 ```
 
 This tool requires local installation of another tools and their availability in the shell: `docker`, `ssh`, `scp`.

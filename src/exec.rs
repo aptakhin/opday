@@ -10,7 +10,7 @@ pub struct RemoteHostCall {
 }
 
 #[allow(dead_code)]
-pub fn exec_command(
+pub fn execute_short_command(
     program: &str,
     command: Vec<&str>,
     build_arg: &Vec<String>,
@@ -61,7 +61,7 @@ pub fn exec_command(
     Ok(stdout)
 }
 
-pub fn exec_command_with_threaded_read(
+pub fn execute_command(
     program: &str,
     command: Vec<&str>,
     build_arg: &Vec<String>,
@@ -94,7 +94,6 @@ pub fn exec_command_with_threaded_read(
     std::thread::spawn(move || {
         let mut stdout = stdout;
         let mut stderr = stderr;
-        let mut t = term::stdout().unwrap();
         debug!("out");
         let mut closing = false;
         loop {
@@ -105,9 +104,6 @@ pub fn exec_command_with_threaded_read(
             }
             if !closing {
                 let s = String::from_utf8_lossy(&buffer[..n]);
-
-                t.cursor_up().expect("Failed to move cursor up.");
-                t.delete_line().expect("Failed to delete cursor up.");
 
                 debug!("out: {}", s.replace('\n', "\\n"));
             }
@@ -120,13 +116,11 @@ pub fn exec_command_with_threaded_read(
             }
             let s = String::from_utf8_lossy(&buffer[..n]);
 
-            t.cursor_up().expect("Failed to move cursor up.");
-            t.delete_line().expect("Failed to delete cursor up.");
+            if n != 0 {
+                debug!("err: {}", s.replace('\n', "\\n"));
+            }
 
-            debug!("err: {}", s.replace('\n', "\\n"));
-
-            let ten_millis = time::Duration::from_millis(100);
-            thread::sleep(ten_millis);
+            thread::sleep(time::Duration::from_secs(1));
         }
     });
 
@@ -139,8 +133,7 @@ pub fn exec_command_with_threaded_read(
         if st.is_some() {
             break;
         }
-        let ten_millis = time::Duration::from_millis(500);
-        thread::sleep(ten_millis);
+        thread::sleep(time::Duration::from_secs(1));
     }
 
     let output = exec_command.output().expect("failed to execute process");
@@ -175,8 +168,8 @@ mod tests {
     use rstest::rstest;
 
     #[rstest]
-    fn test_exec_command_with_threaded_read() {
-        let h = exec_command_with_threaded_read("echo", vec!["hello"], &vec![]).unwrap();
+    fn test_execute_command() {
+        let _ = execute_command("echo", vec!["hello"], &vec![]).unwrap();
         assert!(true)
     }
 }
