@@ -79,3 +79,5 @@ RUST_LOG=debug cargo run
 # Run tests with watch on change
 make testw
 ```
+
+Thinking contexts history [Read-only]: https://miro.com/app/board/uXjVN3A6wi4=/
