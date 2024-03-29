@@ -1,5 +1,7 @@
 # opday (Unstable, not-working and use on your own risk)
 
+[![Build and test](https://github.com/aptakhin/opday/actions/workflows/rust.yml/badge.svg)](https://github.com/aptakhin/opday/actions/workflows/rust.yml)
+
 Dex(Ops)Experience for deployments and other ops operations made easy.
 
 Make docker compose for default nginx:
