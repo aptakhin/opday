@@ -27,7 +27,7 @@ This tool requires local installation of another tools and their availability in
 
 # The idea
 
-This tool prioritizes simplicity and imperativeness over scaling and decorativeness. It provides a simple yet flexible way to maintain basic Ops operations and automates its own infrastructure. There are plenty amount of `deploy.sh` scripts we might write manually or tools like [umputun/spot](https://github.com/umputun/spot), [Kamal](https://kamal-deploy.org/) or Ansible. Usage of some of them might be overkill, but also I don't want to force people to learn one more DSL for this obvious deployment stuff. This time might be spent on learning better new programming language, Kubernetes or speaking language :) Hence, the main features are based on `docker` and `docker compose`.
+This tool prioritizes simplicity and imperativeness over scaling and decorativeness. It provides a simple yet flexible way to maintain basic Ops operations and automates its own infrastructure. There are plenty amount of `deploy.sh` scripts we might write manually or tools like [umputun/spot](https://github.com/umputun/spot), [Kamal](https://kamal-deploy.org/) or Ansible. Usage of some of them might be overkill, but also I don't want to force people to learn one more DSL for this obvious deployment stuff. Hence, the main features are based on `docker` and `docker compose`.
 
 * Allocation of resources on virtual private and dedicated servers
 * Multiple providers support (docker, databases, monitoring, S3, and other storages)
@@ -41,9 +41,13 @@ This tool prioritizes simplicity and imperativeness over scaling and decorativen
 
 Scope of applying this tool:
 * Product is not Kubernetes ready. Kubernetes for monolithic or citadel-like applications brings more complexity than solving problems in the early stages.
-* Less than 100 virtual machines for service. More hosts have become an issue for straightforward push architecture.
+* Less than 100 virtual machines for service. More hosts might become an issue for straightforward push architecture.
 * Up to 100 daily releases
 * Base-level infra with trivial sharding and replication for storage and databases. Everything above might be more suitable for custom or cloud-managed services.
+
+# User guide
+
+[Getting started](./src/doc/getting_started.md)
 
 # Preparing host
 

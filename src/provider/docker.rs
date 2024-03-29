@@ -18,6 +18,7 @@ use crate::exec::{execute_command, RemoteHostCall};
 pub enum DockerProviderCommands {
     /// Login
     Login {
+        /// Path to existing docker-config.json file
         #[arg(short = 'f', long = "file", value_name = "FILE")]
         docker_json_file: Option<PathBuf>,
 
@@ -54,7 +55,7 @@ pub enum DockerProviderCommands {
         #[arg(value_name = "NAME")]
         names: Vec<String>,
 
-        // Path to config file
+        /// Path to config file
         #[arg(short, long, value_name = "FILE")]
         config: Option<PathBuf>,
 
@@ -170,7 +171,7 @@ fn login(
     }
     let host0 = &scope.hosts[0];
 
-    // read password
+    // read password interactively
     if password_stdin {
         let mut input = String::new();
         let mut stdin = io::stdin();
