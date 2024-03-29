@@ -134,6 +134,8 @@ mod tests {
         case::config_after_sub_sub_command_plus_build_arg(vec!["", "docker", "build", "--config", "myconfig", "--build-arg", "BACKEND_TAG=0.0.1"]),
         case::build_push(vec!["", "docker", "build-push"]),
         case::build_push_deploy(vec!["", "docker", "build-push-deploy"]),
+        case::login_username(vec!["", "docker", "login", "-u", "username"]),
+        case::login_username_password_stdin(vec!["", "docker", "login", "-u", "username", "--password-stdin"]),
     )]
     fn test_config_for_any_order(args: Vec<&str>) {
         assert!(Cli::try_parse_from(args).is_ok());

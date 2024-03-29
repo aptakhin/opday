@@ -1,9 +1,12 @@
-use std::fs;
-use std::io::Write;
+use std::fs::File;
+use std::io::{Read, Write};
 use std::path::{Path, PathBuf};
+use std::{fs, io};
 
 use clap::Subcommand;
 
+use base64::{engine::general_purpose::STANDARD, Engine as _};
+use serde_json::json;
 use serde_yaml::{Mapping, Value};
 
 extern crate term;
@@ -13,6 +16,25 @@ use crate::exec::{execute_command, RemoteHostCall};
 
 #[derive(Subcommand)]
 pub enum DockerProviderCommands {
+    /// Login
+    Login {
+        /// Path to existing docker-config.json file
+        #[arg(short = 'f', long = "file", value_name = "FILE")]
+        docker_json_file: Option<PathBuf>,
+
+        #[arg(short = 'u', long = "username", value_name = "USERNAME")]
+        username: Option<String>,
+
+        #[arg(short = 'p', long = "password", value_name = "PASSWORD")]
+        password: Option<String>,
+
+        #[arg(long = "password-stdin", value_name = "PASSWORD-STDIN", action)]
+        password_stdin: bool,
+
+        /// Path to config file
+        #[arg(short, long, value_name = "FILE")]
+        config: Option<PathBuf>,
+    },
     /// Build images
     Build {
         /// Names
@@ -33,7 +55,7 @@ pub enum DockerProviderCommands {
         #[arg(value_name = "NAME")]
         names: Vec<String>,
 
-        // Path to config file
+        /// Path to config file
         #[arg(short, long, value_name = "FILE")]
         config: Option<PathBuf>,
 
@@ -95,6 +117,123 @@ pub enum DockerProviderCommands {
         #[arg(short, long, value_name = "build-arg")]
         build_arg: Vec<String>,
     },
+}
+
+struct TemporaryFile {
+    path: &'static Path,
+}
+
+impl Drop for TemporaryFile {
+    fn drop(&mut self) {
+        let _ = std::fs::remove_file(self.path);
+    }
+}
+
+fn login(
+    config: &Configuration,
+    docker_json_file: &Option<PathBuf>,
+    username: &Option<String>,
+    password: &Option<String>,
+    password_stdin: bool,
+) -> Result<(), Box<dyn std::error::Error>> {
+    let mut use_password = String::new();
+    let mut use_docker_json_file = docker_json_file.clone();
+
+    if use_docker_json_file.is_none() {
+        if username.is_none() {
+            panic!("Username is required for login.")
+        } else if password.is_none() ^ password_stdin {
+            panic!("Password is required from `password` or `password-stdin` options.")
+        }
+    } else {
+        if username.is_some() {
+            panic!("Username is conflicting with -f option.")
+        }
+        if password.is_some() || password_stdin {
+            panic!("Password is conflicting with -f option.")
+        }
+    }
+
+    if use_docker_json_file.is_none() && username.is_none() {
+        panic!("Username is required for login.")
+    }
+
+    if config.environments.len() > 1 {
+        panic!("Only one environment is supported for now.");
+    }
+    let scope = &config.environments[0];
+    let host = RemoteHostCall {
+        private_key: scope.ssh_private_key.clone(),
+    };
+
+    if scope.hosts.len() > 1 {
+        panic!("Only one host is supported for now.");
+    }
+    let host0 = &scope.hosts[0];
+
+    // read password interactively
+    if password_stdin {
+        let mut input = String::new();
+        let mut stdin = io::stdin();
+        let _ = stdin.read_to_string(&mut input);
+        use_password = input.trim().to_owned();
+    }
+
+    let _created_secret_file: Option<TemporaryFile> = None;
+    let internal_files = Path::new(&config.path).join(".opday-generated");
+    let docker_json_file_path = Path::new(&internal_files).join("docker.json");
+
+    if use_docker_json_file.is_none() {
+        let base_64_username_and_password =
+            STANDARD.encode(format!("{}:{}", username.as_ref().unwrap(), use_password).as_bytes());
+
+        let docker_json_value = json!({
+            "auths": {
+                &scope.registry: {
+                    "auth": base_64_username_and_password
+                }
+            },
+        });
+
+        let _created = fs::create_dir_all(&internal_files);
+
+        let mut file = File::create(docker_json_file_path.clone()).expect("Could not open file.");
+        file.write_all(docker_json_value.to_string().as_bytes())
+            .expect("Could not write values.");
+
+        use_docker_json_file = Some(docker_json_file_path.clone());
+    };
+
+    // scp docker registry auth
+    {
+        let mut params: Vec<&str> = vec![];
+        if host.private_key.is_some() {
+            params.push("-i");
+            params.push(host.private_key.as_ref().unwrap());
+        }
+        let bind = use_docker_json_file.unwrap();
+        params.push(bind.to_str().expect("REASON"));
+        let reg = host0.clone() + ":" + &scope.registry_export_auth_config;
+        params.push(&reg);
+        let _ = execute_command("scp", params, &vec![]).expect("Failed to call host.");
+    }
+
+    // docker login for registry
+    {
+        let mut params: Vec<&str> = vec![];
+        if host.private_key.is_some() {
+            params.push("-i");
+            params.push(host.private_key.as_ref().unwrap());
+        }
+        params.push(host0.as_str());
+        let str = "docker login ".to_owned() + &scope.registry;
+        params.push(&str);
+        let _ = execute_command("ssh", params, &vec![]).expect("Failed to call host.");
+    }
+
+    // TODO: remove secret file after login
+
+    Ok(())
 }
 
 fn build(
@@ -225,32 +364,6 @@ fn deploy(
     let host0 = &scope.hosts[0];
     let host0_path = scope.hosts[0].clone() + ":" + &scope.export_path;
 
-    // scp docker registry auth
-    {
-        let mut params: Vec<&str> = vec![];
-        if host.private_key.is_some() {
-            params.push("-i");
-            params.push(host.private_key.as_ref().unwrap());
-        }
-        params.push(&scope.registry_auth_config);
-        let reg = host0.clone() + ":" + &scope.registry_export_auth_config;
-        params.push(&reg);
-        let _ = execute_command("scp", params, &vec![]).expect("Failed to call host.");
-    }
-
-    // docker login for registry
-    {
-        let mut params: Vec<&str> = vec![];
-        if host.private_key.is_some() {
-            params.push("-i");
-            params.push(host.private_key.as_ref().unwrap());
-        }
-        params.push(host0.as_str());
-        let str = "docker login ".to_owned() + &scope.registry;
-        params.push(&str);
-        let _ = execute_command("ssh", params, &vec![]).expect("Failed to call host.");
-    }
-
     // copy all context docker compose files
     let src_path_ensure_last_slash = Path::new(&config.path).join("");
     let src_path_ensure_last_slash_string = src_path_ensure_last_slash.to_string_lossy();
@@ -309,10 +422,35 @@ pub fn prepare_config(command: &DockerProviderCommands) -> Option<PathBuf> {
         DockerProviderCommands::Deploy { config, .. } => config.clone(),
         DockerProviderCommands::BuildPush { config, .. } => config.clone(),
         DockerProviderCommands::BuildPushDeploy { config, .. } => config.clone(),
+        DockerProviderCommands::Login { config, .. } => config.clone(),
     }
 }
 
 pub fn docker_entrypoint(
+    command: &DockerProviderCommands,
+    names: &[String],
+    global_config: &Configuration,
+    build_arg: &[String],
+) -> Result<(), Box<dyn std::error::Error>> {
+    match &command {
+        DockerProviderCommands::Login {
+            docker_json_file,
+            username,
+            password,
+            password_stdin,
+            ..
+        } => login(
+            global_config,
+            docker_json_file,
+            username,
+            password,
+            *password_stdin,
+        ),
+        _ => handle_docker_compose_command(command, names, global_config, build_arg),
+    }
+}
+
+pub fn handle_docker_compose_command(
     command: &DockerProviderCommands,
     _names: &[String],
     global_config: &Configuration,
@@ -329,6 +467,21 @@ pub fn docker_entrypoint(
     let format: DockerComposeFormat = serde_yaml::from_reader(f).expect("Could not read values.");
 
     match &command {
+        DockerProviderCommands::Login {
+            docker_json_file,
+            username,
+            password,
+            password_stdin,
+            ..
+        } => {
+            let _ = login(
+                global_config,
+                docker_json_file,
+                username,
+                password,
+                *password_stdin,
+            );
+        }
         DockerProviderCommands::Build {
             names, build_arg, ..
         } => {

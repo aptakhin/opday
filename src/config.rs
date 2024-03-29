@@ -12,7 +12,6 @@ pub struct DockerComposeFormat {
     pub services: Mapping,
     pub volumes: Option<Mapping>,
 }
-
 pub struct Scope {
     pub hosts: Vec<String>,
     pub export_path: String,
