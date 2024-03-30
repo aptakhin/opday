@@ -19,6 +19,9 @@ doc::
 docw::
 	./cargo watch -x doc --no-deps
 
+build-release::
+	./cargo build --release
+
 l01::
 	RUST_LOG=debug RUST_BACKTRACE=1 ./cargo run -- docker login --config tests/01_trivial-backend-no-storage/opday.toml -f ./secrets/docker-config.json
 

@@ -1,0 +1,46 @@
+name: Publish
+
+on:
+  push:
+    tags:
+      - '*'
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v3
+    - name: Build
+      run: cargo build --verbose
+    - name: Link to local cargo
+      run: ln -s `which cargo`
+
+    - name: build
+      run: make build-release
+    - name: version
+      run: echo "::set-output name=version::$(./target/release/opday --version)"
+      id: version
+    - name: release
+      uses: actions/create-release@v1
+      id: create_release
+      with:
+        draft: false
+        prerelease: false
+        release_name: ${{ steps.version.outputs.version }}
+        tag_name: ${{ github.ref }}
+        body: Changes in this release
+      env:
+        GITHUB_TOKEN: ${{ github.token }}
+    - name: upload darwin artifact
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ github.token }}
+      with:
+        upload_url: ${{ steps.create_release.outputs.upload_url }}
+        asset_path: ./target/release/opday
+        asset_name: opday-darwin
+        asset_content_type: application/gzip
