@@ -2,4 +2,4 @@ target/
 .secrets/*
 opday
 cargo
-docker-compose*.yaml
+./docker-compose*.yaml

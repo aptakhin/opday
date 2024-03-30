@@ -10,7 +10,6 @@ use serde_yaml::Mapping;
 pub struct DockerComposeFormat {
     pub version: String,
     pub services: Mapping,
-    pub volumes: Option<Mapping>,
 }
 pub struct Scope {
     pub hosts: Vec<String>,

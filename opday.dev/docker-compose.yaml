@@ -1,0 +1,20 @@
+version: '3.7'
+services:
+  nginx:
+    image: nginx:latest
+    volumes:
+    - ./nginx/nginx.conf:/etc/nginx/nginx.conf
+    - ./nginx/wwwroot/:/etc/nginx/html
+    - type: bind
+      source: /root/.acme.sh/opday.dev_ecc/
+      target: /root/.acme.sh/opday.dev_ecc/
+      read_only: true
+    - type: bind
+      source: /etc/nginx/cert
+      target: /etc/nginx/cert
+      read_only: true
+    ports:
+    - "80:80"
+volumes:
+  nginx_cert:
+    driver: local

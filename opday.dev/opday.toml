@@ -1,0 +1,21 @@
+path = "opday.dev"
+
+[environments]
+ssh_private_key = "~/.ssh/dkrpublish_rsa"
+registry = "registry.digitalocean.com"
+registry_auth_config = ".secrets/docker-config.json"
+registry_export_auth_config = "/root/.docker/config.json"
+
+[environments.prod]
+hosts = [
+    "root@46.101.98.131",
+]
+
+export_path = "/root/opday.dev"
+
+docker_compose_overrides = [
+    "docker-compose.override-run.prod.yaml",
+]
+
+[environments.prod.build_arg]
+HOST = "https://opday.dev"
