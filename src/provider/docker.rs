@@ -339,13 +339,13 @@ fn deploy(
     let mut run_format = DockerComposeFormat {
         version: format.version.clone(),
         services: Mapping::new(),
-        volumes: Some(Mapping::new()),
     };
 
     for service in format.services.iter() {
         // override environment
         let mut run_service_map = Mapping::new();
-        run_service_map.insert(Value::String((&"build").to_string()), "!reset null".into());
+        // TODO: Add only when we have build
+        // run_service_map.insert(Value::String((&"build").to_string()), "!reset null".into());
         run_service_map.insert(
             Value::String((&"environment").to_string()),
             Value::Mapping(Mapping::new()),
@@ -368,15 +368,16 @@ fn deploy(
     let src_path_ensure_last_slash = Path::new(&config.path).join("");
     let src_path_ensure_last_slash_string = src_path_ensure_last_slash.to_string_lossy();
     {
-        let mut params: Vec<&str> = vec![];
+        let mut params: Vec<String> = vec![];
         if host.private_key.is_some() {
-            params.push("-i");
-            params.push(host.private_key.as_ref().unwrap());
+            params.push("-e".to_owned());
+            params.push("ssh -i ".to_owned() + &host.private_key.clone().unwrap());
         }
-        params.push("-r");
-        params.push(src_path_ensure_last_slash_string.as_ref());
-        params.push(&host0_path);
-        let _ = execute_command("scp", params, &vec![]).expect("Failed to call host.");
+        params.push("-r".to_owned());
+        params.push(src_path_ensure_last_slash_string.to_string());
+        params.push(host0_path.clone());
+        let params2: Vec<&str> = params.iter().map(|s| s.as_str()).collect();
+        let _ = execute_command("rsync", params2, &vec![]).expect("Failed to call host.");
     }
 
     let internal_files_export = Path::new(&scope.export_path).join(".opday-generated");
@@ -399,7 +400,7 @@ fn deploy(
     deploy_command += " -f ";
     let generate_file_export_path = internal_files_export.join(generate_file_name);
     deploy_command += &generate_file_export_path.to_string_lossy();
-    deploy_command += " up -d";
+    deploy_command += " up -d --build";
 
     {
         let mut params: Vec<&str> = vec![];
@@ -535,7 +536,6 @@ mod tests {
         DockerComposeFormat {
             version: "3.7".to_string(),
             services: Mapping::new(),
-            volumes: None,
         }
     }
 

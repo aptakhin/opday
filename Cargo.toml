@@ -2,15 +2,24 @@
 name = "opday"
 version = "0.1.0"
 edition = "2021"
+authors = [
+    "Alexander Ptakhin <me@aptakhin.name>",
+]
+description = "Dex(Ops)Experience for deployments and other ops operations made easy"
+license = "MIT"
+license-file = "LICENSE"
+repository = "https://github.com/aptakhin/opday"
 
 [dependencies]
 base64 = "0.22.0"
 clap = { version = "4.5.3", features = ["derive"] }
 env_logger = "0.11.3"
 log = "0.4.21"
-rstest = "0.18.2"
 serde = { version = "1.0.195", features = ["derive"] }
 serde_json = "1.0.111"
 serde_yaml = "0.9.30"
 term = "0.7.0"
 toml = "0.8.11"
+
+[dev-dependencies]
+rstest = "0.18.2"

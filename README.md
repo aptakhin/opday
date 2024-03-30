@@ -23,7 +23,7 @@ Let's call build now:
 opday docker build
 ```
 
-This tool requires local installation of another tools and their availability in the shell: `docker`, `ssh`, `scp`.
+This tool requires local installation of another tools and their availability in the shell: `docker`, `ssh`, `rsync`.
 
 # The idea
 
