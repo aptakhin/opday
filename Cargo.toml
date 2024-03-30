@@ -2,6 +2,13 @@
 name = "opday"
 version = "0.1.0"
 edition = "2021"
+authors = [
+    "Alexander Ptakhin <me@aptakhin.name>",
+]
+description = "Dex(Ops)Experience for deployments and other ops operations made easy"
+license = "MIT"
+license-file = "LICENSE"
+repository = "https://github.com/aptakhin/opday"
 
 [dependencies]
 base64 = "0.22.0"

@@ -2,6 +2,7 @@ version: '3.7'
 services:
   backend:
     image: registry.digitalocean.com/frlr/opday/02-backend:${BACKEND_TAG}
+    build: '!reset null'
     command: uvicorn app:app --host 0.0.0.0 --port 8000
     restart: unless-stopped
     ports:
@@ -13,6 +14,7 @@ services:
 
   nginx:
     image: registry.digitalocean.com/frlr/opday/02-nginx:${NGINX_TAG}
+    build: '!reset null'
     ports:
     - "80:80"
     - "443:443"
