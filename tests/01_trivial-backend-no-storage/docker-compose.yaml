@@ -9,7 +9,6 @@ services:
       - ./backend:/backend
     environment:
       ENVIRONMENT: local
-      DATABASE_URL: psycopg2://postgres:postgres@0.0.0.0:5432/postgres
 
 volumes:
   backend:

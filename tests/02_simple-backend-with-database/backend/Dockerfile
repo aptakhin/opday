@@ -5,7 +5,7 @@ WORKDIR /usr/src/app
 
 ENV PYTHONUNBUFFERED 1
 
-RUN pip install poetry==1.8.2
+RUN pip install poetry==1.8.3
 
 COPY ./pyproject.toml .
 

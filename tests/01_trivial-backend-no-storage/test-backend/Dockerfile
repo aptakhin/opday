@@ -5,11 +5,11 @@ WORKDIR /usr/src/app
 
 ENV PYTHONUNBUFFERED 1
 
-RUN pip install poetry==1.2.2
+RUN pip install poetry==1.8.3
 
 COPY ./pyproject.toml .
 
-RUN POETRY_VIRTUALENVS_CREATE=false poetry install --with=dev -n --no-root
+RUN POETRY_VIRTUALENVS_CREATE=false poetry install -n --no-root
 
 EXPOSE 8000
 

@@ -16,7 +16,7 @@ pub fn execute_short_command(
     build_arg: &Vec<String>,
 ) -> Result<String, Box<dyn std::error::Error>> {
     let mut exec_command = Command::new(program);
-    exec_command.args(command);
+    exec_command.args(command.clone());
     for build_arg_item in build_arg {
         let parts: Vec<&str> = build_arg_item.splitn(2, '=').collect();
         if parts.len() < 2 {
@@ -24,11 +24,14 @@ pub fn execute_short_command(
         }
         exec_command.env(parts[0], parts[1]);
     }
+
+    // TODO: correct quoting of command args
+    let command_str = String::new() + program + " " + &command.join(" ");
+
     debug!(
-        "Start command: {:?} envs:{:?} args:{:?}",
-        program,
+        "Start command: {} envs:{:?}",
+        command_str,
         &exec_command.get_envs(),
-        &exec_command.get_args(),
     );
     let output = exec_command.output().expect("failed to execute process");
 
@@ -36,10 +39,9 @@ pub fn execute_short_command(
     let stdout = String::from_utf8_lossy(&output.stdout).to_string();
     let stderr = String::from_utf8_lossy(&output.stderr).to_string();
     debug!(
-        "Executed command: {:?} envs:{:?} args:{:?} {:?} {:?} {:?}",
-        program,
+        "Executed command: {:?} envs:{:?} status: {:?} out: {:?} err: {:?}",
+        command_str,
         &exec_command.get_envs(),
-        &exec_command.get_args(),
         status,
         stdout,
         stderr
@@ -48,10 +50,9 @@ pub fn execute_short_command(
         return Err(Box::new(std::io::Error::new(
             std::io::ErrorKind::Other,
             format!(
-                "Command failed: {:?} envs:{:?} args:{:?} status:{:?} stdout:{:?} stderr:{:?}",
-                program,
+                "Command failed: {:?} envs:{:?} status:{:?} stdout:{:?} stderr:{:?}",
+                command_str,
                 &exec_command.get_envs(),
-                &exec_command.get_args(),
                 status,
                 stdout,
                 stderr
@@ -75,12 +76,14 @@ pub fn execute_command(
         }
         exec_command.env(parts[0], parts[1]);
     }
+
+    // TODO: correct quoting of command args
+    let command_str = String::new() + program + " " + &command.join(" ");
     debug!(
-        "Start command: {:?} {:?} envs:{:?} args:{:?}",
+        "Start command: {} envs: {:?} cmd: {}",
         program,
-        &command,
-        &exec_command.get_envs(),
-        &exec_command.get_args(),
+        &exec_command.get_envs(), // TODO: filter out secrets
+        &command_str,
     );
 
     let mut process = exec_command
@@ -94,7 +97,6 @@ pub fn execute_command(
     std::thread::spawn(move || {
         let mut stdout = stdout;
         let mut stderr = stderr;
-        debug!("out");
         let mut closing = false;
         loop {
             let mut buffer = [0; 1024];
@@ -142,17 +144,17 @@ pub fn execute_command(
     let stdout = String::from_utf8_lossy(&output.stdout).to_string();
     let stderr = String::from_utf8_lossy(&output.stderr).to_string();
     debug!(
-        "Executed command:{:?} args:{:?} status:{:?}",
-        program, &command, status
+        "Executed command: {} status: {:?} cmd: {}",
+        program, status, &command_str
     );
     if !status.success() {
         return Err(Box::new(std::io::Error::new(
             std::io::ErrorKind::Other,
             format!(
-                "Command failed: {:?} envs:{:?} args:{:?} status:{:?} stdout:{:?} stderr:{:?}",
+                "Command failed: {:?} envs:{:?} cmd:{:?} status:{:?} stdout:{:?} stderr:{:?}",
                 program,
                 &exec_command.get_envs(),
-                &exec_command.get_args(),
+                &command_str,
                 status,
                 stdout,
                 stderr

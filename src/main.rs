@@ -128,7 +128,7 @@ mod tests {
         args,
         case::just_docker(vec!["docker"]),
         case::just_docker_build(vec!["", "docker", "build"]),
-        case::config_abefore_sub_command(vec!["", "--config", "myconfig", "docker", "build"]),
+        case::config_before_sub_command(vec!["", "--config", "myconfig", "docker", "build"]),
         case::config_after_sub_command(vec!["", "docker", "--config", "myconfig", "build"]),
         case::config_after_sub_sub_command(vec!["", "docker", "build", "--config", "myconfig"]),
         case::config_after_sub_sub_command_plus_build_arg(vec!["", "docker", "build", "--config", "myconfig", "--build-arg", "BACKEND_TAG=0.0.1"]),

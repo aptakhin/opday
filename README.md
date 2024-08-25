@@ -44,6 +44,7 @@ Scope of applying this tool:
 * Less than 100 virtual machines for service. More hosts might become an issue for straightforward push architecture.
 * Up to 100 daily releases
 * Base-level infra with trivial sharding and replication for storage and databases. Everything above might be more suitable for custom or cloud-managed services.
+* It's more flexible for wide kind of services, but more verbose in configuring `Docker` and `docker-compose` files than specialiazed tools like Vercel for frontend and NodeJS.
 
 # User guide
 
